@@ -3,11 +3,10 @@ using UnityEngine;
 
 namespace Renard
 {
-    /// <summary>※Renard拡張機能</summary>
     public class ApplicationCopyright
     {
         /// <summary>初年度</summary>
-        public static string FirstYear = "2024";
+        public static string FirstYear = "2025";
 
         /// <summary>今年度</summary>
         public static string NowYear => $"{DateTime.Now.Year}";

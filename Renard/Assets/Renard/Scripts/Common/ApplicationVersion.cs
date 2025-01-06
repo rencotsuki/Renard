@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Renard
 {
-    /// <summary>※Renard拡張機能</summary>
     public class ApplicationVersion
     {
         public static string Version = "0.0.0";

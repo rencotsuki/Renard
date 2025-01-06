@@ -54,7 +54,7 @@ namespace Renard
             OnSave();
         }
 
-        //[MenuItem("Tools/Create ApplicationVersionAsset")]
-        //private static void CreateApplicationVersionAsset() => OnSave();
+        [MenuItem("Assets/Create/Renard/ApplicationVersion")]
+        private static void CreateApplicationVersionAsset() => OnSave();
     }
 }
