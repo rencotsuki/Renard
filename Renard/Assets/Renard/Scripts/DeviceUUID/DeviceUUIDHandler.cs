@@ -4,9 +4,9 @@ using UnityEngine;
 namespace Renard
 {
     [Serializable]
-    public class DeviceUUIDHandler : MonoBehaviourCustom
+    public class DeviceUuidHandler : MonoBehaviourCustom
     {
-        public static string UUID { get; private set; } = string.Empty;
+        public static string Uuid { get; private set; } = string.Empty;
 
         protected string ProductKey => $"com.{Application.companyName}.{Application.productName}";
 
@@ -21,16 +21,16 @@ namespace Renard
              */
 
 #if UNITY_IOS
-            UUID = GetUUID(ProductKey);
+            UUID = GetUuid(ProductKey);
 #else
-            UUID = SystemInfo.deviceUniqueIdentifier;
+            Uuid = SystemInfo.deviceUniqueIdentifier;
 #endif
         }
 
-        public void ClearData()
+        public void Clear()
         {
 #if UNITY_IOS
-            DeleteUUID(ProductKey);
+            DeleteUuid(ProductKey);
 #endif
         }
 
@@ -42,7 +42,7 @@ namespace Renard
         [System.Runtime.InteropServices.DllImport("__Internal")]
         private static extern void deletePersistentUUID(string key);
 
-        private string GetUUID(string key)
+        private string GetUuid(string key)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace Renard
             }
         }
 
-        private void DeleteUUID(string key)
+        private void DeleteUuid(string key)
         {
             try
             {

@@ -62,14 +62,14 @@ namespace Renard.Debuger
 #if UNITY_EDITOR
 
         private static int _isLogModeAll = -1;
-        private const string _debugLoggerLogMode = "DebugLoggerLogMode";
+        private const string _debugLoggerMode = "DebugLoggerMode";
 
         protected static bool IsLogModeAll
         {
             get
             {
                 if (_isLogModeAll == -1)
-                    _isLogModeAll = UnityEditor.EditorPrefs.GetBool(_debugLoggerLogMode, true) ? 1 : 0;
+                    _isLogModeAll = UnityEditor.EditorPrefs.GetBool(_debugLoggerMode, true) ? 1 : 0;
                 return _isLogModeAll != 0;
             }
             set
@@ -78,24 +78,24 @@ namespace Renard.Debuger
                 if (newValue != _isLogModeAll)
                 {
                     _isLogModeAll = newValue;
-                    UnityEditor.EditorPrefs.SetBool(_debugLoggerLogMode, value);
+                    UnityEditor.EditorPrefs.SetBool(_debugLoggerMode, value);
                 }
             }
         }
 
-        [UnityEditor.MenuItem("Tools/LogMode/All", false)]
-        [UnityEditor.MenuItem("Tools/LogMode/JustErrors", false)]
-        public static void ToggleSimulationMode()
+        [UnityEditor.MenuItem("Renard/LogMode/All", false)]
+        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", false)]
+        public static void ToggleLogMode()
         {
             IsLogModeAll = !IsLogModeAll;
         }
 
-        [UnityEditor.MenuItem("Tools/LogMode/All", true)]
-        [UnityEditor.MenuItem("Tools/LogMode/JustErrors", true)]
-        public static bool ToggleSimulationModeValidate()
+        [UnityEditor.MenuItem("Renard/LogMode/All", true)]
+        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", true)]
+        public static bool ToggleLogModeValidate()
         {
-            UnityEditor.Menu.SetChecked("Tools/LogMode/All", IsLogModeAll);
-            UnityEditor.Menu.SetChecked("Tools/LogMode/JustErrors", !IsLogModeAll);
+            UnityEditor.Menu.SetChecked("Renard/LogMode/All", IsLogModeAll);
+            UnityEditor.Menu.SetChecked("Renard/LogMode/JustErrors", !IsLogModeAll);
             return true;
         }
 

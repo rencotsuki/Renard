@@ -8,9 +8,19 @@ namespace Renard
 {
     public class Launcher : MonoBehaviourCustom
     {
-        protected string FirstScene => "Sample";
+        protected LauncherConfigData configData = null;
 
         private CancellationTokenSource _startupToken = null;
+
+        private void Awake()
+        {
+            isDebugLog = true;
+
+            var config = LauncherConfig.Load();
+            configData = config?.GetConfig();
+
+            Application.targetFrameRate = configData != null ? configData.TargetFrameRate : LauncherConfig.DefaultTargetFrameRate;
+        }
 
         private void Start()
         {
@@ -20,29 +30,68 @@ namespace Renard
 
         private async UniTask OnStartupAsync(CancellationToken token)
         {
-            // ライセンス確認
-            if (true)
+            try
             {
-                await OnSuccessStartupAsync(token);
+                // ライセンス確認
+                if (!await CheckLicenseAsync(token))
+                    throw new Exception("license error.");
+
+                await SceneManager.LoadSceneAsync(configData != null ? configData.FirstSceneName : LauncherConfig.DefaultFirstSceneName, LoadSceneMode.Single);
+                token.ThrowIfCancellationRequested();
+
+                if (configData != null && configData.additiveScenes.Length > 0)
+                {
+                    foreach (var scene in configData.additiveScenes)
+                    {
+                        await SceneManager.LoadSceneAsync(configData.FirstSceneName, LoadSceneMode.Additive);
+                        token.ThrowIfCancellationRequested();
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await OnFailedStartupAsync(token, "ライセンス認証エラー");
+                Log(DebugerLogType.Info, "OnStartupAsync", $"{ex.Message}");
+
+                if (!token.IsCancellationRequested)
+                    Application.Quit();
             }
         }
 
-        private async UniTask OnSuccessStartupAsync(CancellationToken token)
+        private async UniTask<bool> CheckLicenseAsync(CancellationToken token)
         {
-            await SceneManager.LoadSceneAsync(FirstScene, LoadSceneMode.Single);
-            token.ThrowIfCancellationRequested();
-        }
+            try
+            {
+                if (string.IsNullOrEmpty(DeviceUuidHandler.Uuid))
+                {
+                    // エラーコード発行
 
-        private async UniTask OnFailedStartupAsync(CancellationToken token, string messege)
-        {
-            await UniTask.Delay(TimeSpan.FromSeconds(3f), cancellationToken: token);
-            token.ThrowIfCancellationRequested();
+                    throw new Exception("null or empty uuid.");
+                }
 
-            Application.Quit();
+                // ライセンスキーの存在確認
+                if (false)
+                {
+                    // ライセンス発行の指示画面を表示する
+
+                    throw new Exception("not found license key.");
+                }
+
+                // ライセンスキーと照合する
+                if (false)
+                {
+                    // エラーコード発行
+
+                    throw new Exception("discrepancy license.");
+                }
+
+                await UniTask.NextFrame(token);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "CheckLicenseAsync", $"{ex.Message}");
+                return false;
+            }
         }
     }
 }

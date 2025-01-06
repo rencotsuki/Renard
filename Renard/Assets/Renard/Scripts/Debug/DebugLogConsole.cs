@@ -6,6 +6,11 @@ using TMPro;
 
 namespace Renard.Debuger
 {
+    /*
+     * 自分自身のログが出されないように
+     * MonoBehaviourCustomは使わない！
+     */
+
     /// <summary>※Renard拡張機能</summary>
     [Serializable]
     public class DebugLogConsole : MonoBehaviour

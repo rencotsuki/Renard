@@ -24,22 +24,22 @@ public class DeviceUuidUI : MonoBehaviourCustom
         _deviceUuid.Length = 0;
         _deviceUuid.Append("ID:");
 
-        if (!string.IsNullOrEmpty(DeviceUUIDHandler.UUID))
+        if (!string.IsNullOrEmpty(DeviceUuidHandler.Uuid))
         {
             if (debugView)
             {
-                _deviceUuid.Append(DeviceUUIDHandler.UUID);
+                _deviceUuid.Append(DeviceUuidHandler.Uuid);
             }
             else
             {
                 _deviceUuid.Append("****");
 
-                for (int i = 0; i < DeviceUUIDHandler.UUID.Length; i++)
+                for (int i = 0; i < DeviceUuidHandler.Uuid.Length; i++)
                 {
-                    if (DeviceUUIDHandler.UUID.Length - 4 > i)
+                    if (DeviceUuidHandler.Uuid.Length - 4 > i)
                         continue;
 
-                    _deviceUuid.Append(DeviceUUIDHandler.UUID[i]);
+                    _deviceUuid.Append(DeviceUuidHandler.Uuid[i]);
                 }
             }
         }
