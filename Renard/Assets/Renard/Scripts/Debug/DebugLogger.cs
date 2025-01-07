@@ -83,15 +83,15 @@ namespace Renard.Debuger
             }
         }
 
-        [UnityEditor.MenuItem("Renard/LogMode/All", false)]
-        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", false)]
+        [UnityEditor.MenuItem("Renard/LogMode/All", false, 2)]
+        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", false, 2)]
         public static void ToggleLogMode()
         {
             IsLogModeAll = !IsLogModeAll;
         }
 
-        [UnityEditor.MenuItem("Renard/LogMode/All", true)]
-        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", true)]
+        [UnityEditor.MenuItem("Renard/LogMode/All", true, 2)]
+        [UnityEditor.MenuItem("Renard/LogMode/JustErrors", true, 2)]
         public static bool ToggleLogModeValidate()
         {
             UnityEditor.Menu.SetChecked("Renard/LogMode/All", IsLogModeAll);
