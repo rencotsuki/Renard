@@ -2,6 +2,7 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace Renard
@@ -35,6 +36,10 @@ namespace Renard
                 // ライセンス確認
                 if (!await CheckLicenseAsync(token))
                     throw new Exception("license error.");
+
+                // スプラッシュ表示が完了しているか確認する
+                await UniTask.WaitWhile(() => !SplashScreen.isFinished, cancellationToken: token);
+                token.ThrowIfCancellationRequested();
 
                 await SceneManager.LoadSceneAsync(configData != null ? configData.FirstSceneName : LauncherConfig.DefaultFirstSceneName, LoadSceneMode.Single);
                 token.ThrowIfCancellationRequested();
