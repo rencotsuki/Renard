@@ -20,8 +20,8 @@ namespace Renard
              * 可変してしまうので絶対に使わない！
              */
 
-#if UNITY_IOS
-            UUID = GetUuid(ProductKey);
+#if UNITY_IOS && !UNITY_EDITOR
+            Uuid = GetUuid(ProductKey);
 #else
             Uuid = SystemInfo.deviceUniqueIdentifier;
 #endif
@@ -29,12 +29,12 @@ namespace Renard
 
         public void Clear()
         {
-#if UNITY_IOS
+#if UNITY_IOS && !UNITY_EDITOR
             DeleteUuid(ProductKey);
 #endif
         }
 
-#if UNITY_IOS
+#if UNITY_IOS && !UNITY_EDITOR
 
         [System.Runtime.InteropServices.DllImport("__Internal")]
         private static extern IntPtr getPersistentUUID(string key);

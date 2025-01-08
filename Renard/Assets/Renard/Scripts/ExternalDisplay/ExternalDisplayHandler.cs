@@ -103,11 +103,11 @@ namespace Renard
         {
             try
             {
-                if (_outputSource == null)
+                if (outputSource == null)
                     throw new Exception("texture is not assigned!");
 
                 // UnityのTextureをネイティブポインタに変換して渡す
-                IntPtr texturePtr = _outputSource.GetNativeTexturePtr();
+                IntPtr texturePtr = outputSource.GetNativeTexturePtr();
 
                 SetupExternalDisplay(texturePtr);
             }
