@@ -23,6 +23,8 @@ namespace Renard
                     outputView.enabled = (outputView.texture != null);
                 }
             }
+
+            SystemConsoleHandler.OpenSystemWindow("Sample", "起動成功！", null, "ＯＫ");
         }
     }
 }
