@@ -33,7 +33,7 @@ namespace Renard
 #if UNITY_EDITOR
                 return AssetBundleBuildConfig.GetPlatformManifestName(UnityEditor.EditorUserBuildSettings.activeBuildTarget);
 #else
-                return AssetBundleUtility.GetPlatformManifestName(Application.platform);
+                return AssetBundleBuildConfig.GetPlatformManifestName(Application.platform);
 #endif
             }
         }
@@ -63,7 +63,7 @@ namespace Renard
 #if UNITY_EDITOR
                 return $"{DirectoryPath}/{folderName}/{AssetBundleConfig.GetPlatformDirectoryName(AssetBundleBuildConfig.ToRuntimePlatform(UnityEditor.EditorUserBuildSettings.activeBuildTarget))}";
 #else
-                return $"{DirectoryPath}/{folderName}/{AssetBundleUtility.GetPlatformDirectoryName(Application.platform)}";
+                return $"{DirectoryPath}/{folderName}/{AssetBundleConfig.GetPlatformDirectoryName(Application.platform)}";
 #endif
             }
         }
