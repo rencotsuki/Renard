@@ -114,3 +114,9 @@ fastlane/report.xml
 
 # android?
 *.toc
+
+# Renard ProductConfigs
+Renard/Assets/Renard/Resources/ApplicationVersion.asset
+Renard/Assets/Renard/Resources/ApplicationVersion.asset.meta
+Renard/Assets/Renard/Resources/LicenseConfig.asset
+Renard/Assets/Renard/Resources/LicenseConfig.asset.meta

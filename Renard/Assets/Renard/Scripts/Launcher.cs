@@ -9,7 +9,21 @@ namespace Renard
 {
     public class Launcher : MonoBehaviourCustom
     {
+        [SerializeField] protected LicenseHandler licenseHandler = null;
+
         protected LauncherConfigData configData = null;
+
+        protected bool skipLicense
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (!LicenseSimulation)
+                    return true;
+#endif
+                return false;
+            }
+        }
 
         private CancellationTokenSource _startupToken = null;
 
@@ -73,20 +87,29 @@ namespace Renard
                     throw new Exception("null or empty uuid.");
                 }
 
-                // ライセンスキーの存在確認
-                if (false)
+                // ライセンスを確認
+                var status = licenseHandler.Activation(DeviceUuidHandler.Uuid);
+                if (status != LicenseStatusEnum.Success)
                 {
-                    // ライセンス発行の指示画面を表示する
+                    if (!skipLicense)
+                    {
+                        // ファイルがない場合
+                        if (status != LicenseStatusEnum.NotFile)
+                        {
+                            // ライセンス発行の指示画面を表示
+                            throw new Exception("not found license.");
+                        }
 
-                    throw new Exception("not found license key.");
-                }
+                        // ライセンスの有効期限切れ
+                        if (status != LicenseStatusEnum.Expired)
+                        {
+                            // ライセンス有効期限切れを表示
+                            throw new Exception("expired license.");
+                        }
 
-                // ライセンスキーと照合する
-                if (false)
-                {
-                    // エラーコード発行
-
-                    throw new Exception("discrepancy license.");
+                        // ライセンスの不正を表示
+                        throw new Exception("injustice license.");
+                    }
                 }
 
                 await UniTask.NextFrame(token);
@@ -98,5 +121,42 @@ namespace Renard
                 return false;
             }
         }
+
+#if UNITY_EDITOR
+        private static int _isLicenseSimulation = -1;
+        private const string _licenseSimulation = "LicenseSimulation";
+
+        protected static bool LicenseSimulation
+        {
+            get
+            {
+                if (_isLicenseSimulation == -1)
+                    _isLicenseSimulation = UnityEditor.EditorPrefs.GetBool(_licenseSimulation, true) ? 1 : 0;
+                return _isLicenseSimulation != 0;
+            }
+            set
+            {
+                int newValue = value ? 1 : 0;
+                if (newValue != _isLicenseSimulation)
+                {
+                    _isLicenseSimulation = newValue;
+                    UnityEditor.EditorPrefs.SetBool(_licenseSimulation, value);
+                }
+            }
+        }
+
+        [UnityEditor.MenuItem("Renard/LicenseSimulation", false, 1)]
+        public static void ToggleLicenseSimulation()
+        {
+            LicenseSimulation = !LicenseSimulation;
+        }
+
+        [UnityEditor.MenuItem("Renard/LicenseSimulation", true, 1)]
+        public static bool ToggleLicenseSimulationValidate()
+        {
+            UnityEditor.Menu.SetChecked("Renard/LicenseSimulation", LicenseSimulation);
+            return true;
+        }
+#endif
     }
 }
