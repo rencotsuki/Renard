@@ -7,7 +7,7 @@ namespace Renard.License
     [Serializable]
     public class LicenseConfigAsset : ScriptableObject
     {
-        public const string Path = "Assets/Renard/Resources";
+        public const string Path = "Assets/Resources";
         public const string FileName = "LicenseConfig";
         public const string FileExtension = "asset";
 

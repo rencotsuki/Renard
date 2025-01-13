@@ -6,7 +6,7 @@ namespace Renard
     [Serializable]
     public class ApplicationVersionAsset : ScriptableObject
     {
-        public const string Path = "Assets/Renard/Resources";
+        public const string Path = "Assets/Resources";
         public const string FileName = "ApplicationVersion";
         public const string FileExtension = "asset";
 

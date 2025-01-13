@@ -1,4 +1,6 @@
-﻿using UnityEditor;
+﻿using System;
+using System.Collections.Generic;
+using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
@@ -9,10 +11,9 @@ namespace Renard
      * UnityPackageManager(UPM)パッケージを自動的インポートするためのスクリプト
      */
 
-    public class UPMRegistEditor
+    //[InitializeOnLoad]
+    public static class UPMRegistEditor
     {
-        private static AddRequest addRequest;
-
         // インポートしたいパッケージ
         private static readonly string[] importPackges = new string[]
             {
@@ -20,35 +21,70 @@ namespace Renard
                 "https://github.com/neuecc/UniRx.git?path=Assets/Plugins/UniRx/Scripts",
             };
 
-        [InitializeOnLoadMethod]
-        [MenuItem("Renard/Install Package", false)]
-        public static void InstallPackage()
+        private static AddRequest addRequest = null;
+        private static List<string> targets = null;
+
+        static UPMRegistEditor()
         {
-            if (importPackges == null || importPackges.Length <= 0)
-                return;
-
-            foreach (var package in importPackges)
-            {
-                addRequest = Client.Add(package);
-            }
-
-            EditorApplication.update += Progress;
+            EditorApplication.update += RunOnceOnStartup;
         }
 
-        private static void Progress()
+        private static void RunOnceOnStartup()
         {
-            if (addRequest.IsCompleted)
+            InstallPackages();
+            EditorApplication.update -= RunOnceOnStartup;
+        }
+
+        [MenuItem("Renard/Install Packages", false)]
+        public static void InstallPackages()
+        {
+            //TODO: もう少し上手い処理を考えた方が良さそう
+            InstallPackage();
+        }
+
+        private static void InstallPackage()
+        {
+            try
             {
-                if (addRequest.Status == StatusCode.Success)
+                if (targets == null || targets.Count <= 0)
+                    return;
+
+                foreach (var package in targets)
                 {
-                    Debug.Log($"{typeof(UPMRegistEditor).Name}::Progress - installed package. {addRequest.Result.packageId}");
-                }
-                else if (addRequest.Status >= StatusCode.Failure)
-                {
-                    Debug.LogError($"{typeof(UPMRegistEditor).Name}::Progress - failed to install package. {addRequest.Error.message}");
+                    addRequest = Client.Add(package);
                 }
 
-                EditorApplication.update -= Progress;
+                EditorApplication.update += ProgressInstall;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(UPMRegistEditor).Name}::InstallPackage - {ex.Message}");
+            }
+        }
+
+        private static void ProgressInstall()
+        {
+            try
+            {
+                if (addRequest.IsCompleted)
+                {
+                    if (addRequest.Status == StatusCode.Success)
+                    {
+                        Debug.Log($"{typeof(UPMRegistEditor).Name}::ProgressInstall - installed package. {addRequest.Result.packageId}");
+                    }
+                    else if (addRequest.Status >= StatusCode.Failure)
+                    {
+                        Debug.LogError($"{typeof(UPMRegistEditor).Name}::ProgressInstall - failed to install package. {addRequest.Error.message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(UPMRegistEditor).Name}::ProgressInstall - {ex.Message}");
+            }
+            finally
+            {
+                EditorApplication.update -= ProgressInstall;
             }
         }
     }

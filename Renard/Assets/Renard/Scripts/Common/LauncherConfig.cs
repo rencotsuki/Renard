@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEngine;
 
 namespace Renard
@@ -12,9 +13,12 @@ namespace Renard
     }
 
     [Serializable]
-    [CreateAssetMenu(fileName = "LauncherConfig", menuName = "Renard/LauncherConfig")]
     public class LauncherConfig : ScriptableObject
     {
+        public const string Path = "Assets/Resources";
+        public const string FileName = "LauncherConfig";
+        public const string FileExtension = "asset";
+
         public const int DefaultTargetFrameRate = 60;
         public const string DefaultFirstSceneName = "Sample";
         public static string[] DefaultAdditiveScenes => new string[0];
@@ -30,7 +34,7 @@ namespace Renard
 
         public static LauncherConfig Load()
         {
-            return Resources.Load<LauncherConfig>("LauncherConfig");
+            return Resources.Load<LauncherConfig>(FileName);
         }
 
         public LauncherConfigData GetConfig()
@@ -86,4 +90,34 @@ namespace Renard
             return other;
         }
     }
+
+#if UNITY_EDITOR
+
+    public static class LauncherConfigEditor
+    {
+        [UnityEditor.MenuItem("Assets/Create/Renard/LauncherConfig")]
+        private static void CreateLicenseConfigAsset()
+        {
+            var result = new LauncherConfig();
+            var fullPath = $"{LauncherConfig.Path}/{LauncherConfig.FileName}.{LauncherConfig.FileExtension}";
+
+            try
+            {
+                if (!Directory.Exists(LauncherConfig.Path))
+                    Directory.CreateDirectory(LauncherConfig.Path);
+
+                UnityEditor.EditorUtility.SetDirty(result);
+                UnityEditor.AssetDatabase.CreateAsset(result, fullPath);
+
+                UnityEditor.AssetDatabase.SaveAssets();
+                UnityEditor.AssetDatabase.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(LauncherConfigEditor).Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
+            }
+        }
+    }
+
+#endif
 }
