@@ -25,9 +25,9 @@ Thumbs.db
 *.vscode*
 *.vs*
 
-ExportedObj/
-Assets/UnityVS
-Assets/UnityVS.meta
+Renard/ExportedObj/
+Renard/Assets/UnityVS
+Renard/Assets/UnityVS.meta
 
 # ============ #
 # for others   #
@@ -116,7 +116,7 @@ fastlane/report.xml
 *.toc
 
 # Renard ProductConfigs
-Assets/Renard/Resources/ApplicationVersion.asset
-Assets/Renard/Resources/ApplicationVersion.asset.meta
-Assets/Renard/Resources/LicenseConfig.asset
-Assets/Renard/Resources/LicenseConfig.asset.meta
+Renard/Assets/Renard/Resources/ApplicationVersion.asset
+Renard/Assets/Renard/Resources/ApplicationVersion.asset.meta
+Renard/Assets/Renard/Resources/LicenseConfig.asset
+Renard/Assets/Renard/Resources/LicenseConfig.asset.meta
