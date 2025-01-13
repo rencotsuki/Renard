@@ -145,16 +145,16 @@ namespace Renard
             }
         }
 
-        [UnityEditor.MenuItem("Renard/LicenseSimulation", false, 1)]
+        [UnityEditor.MenuItem("Renard/License/IsCheck", false, 3)]
         public static void ToggleLicenseSimulation()
         {
             LicenseSimulation = !LicenseSimulation;
         }
 
-        [UnityEditor.MenuItem("Renard/LicenseSimulation", true, 1)]
+        [UnityEditor.MenuItem("Renard/License/IsCheck", true, 3)]
         public static bool ToggleLicenseSimulationValidate()
         {
-            UnityEditor.Menu.SetChecked("Renard/LicenseSimulation", LicenseSimulation);
+            UnityEditor.Menu.SetChecked("Renard/License/IsCheck", LicenseSimulation);
             return true;
         }
 #endif

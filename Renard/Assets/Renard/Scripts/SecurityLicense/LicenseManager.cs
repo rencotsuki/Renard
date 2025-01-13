@@ -22,7 +22,10 @@ namespace Renard
     {
         public string Uuid;
         public string ContentsId;
-        public DateTime ExpiryDate;
+        public DateTime CreateDate;
+        public int ValidityDays;
+
+        public DateTime ExpiryDate => CreateDate.AddDays(ValidityDays);
     }
 }
 
@@ -144,7 +147,7 @@ namespace Renard.License
                 {
                     if (dataParts[2] == CreateLicensePassKey(licensePassKey, dataParts[0]))
                     {
-                        if (DateTime.TryParse(dataParts[3], out date.ExpiryDate))
+                        if (DateTime.TryParse(dataParts[3], out date.CreateDate))
                         {
                             date.Uuid = dataParts[0];
                             date.ContentsId = dataParts[1];
@@ -165,7 +168,7 @@ namespace Renard.License
             {
                 Log(DebugerLogType.Info, "ValidateLicense", $"{ex.Message}");
 
-                date.ExpiryDate = DateTime.MinValue;
+                date.CreateDate = DateTime.MinValue;
                 status = LicenseStatusEnum.Injustice;
             }
             return status;

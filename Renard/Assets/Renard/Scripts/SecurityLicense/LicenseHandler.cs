@@ -4,6 +4,12 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using System.Linq;
+using UnityEngine.UIElements;
+using UnityEditor;
+#endif
+
 namespace Renard
 {
     using License;
@@ -14,7 +20,7 @@ namespace Renard
         protected string fileExtension => ""; //拡張子を付けられるようにしておく
         protected string fileFullName => $"{(string.IsNullOrEmpty(fileExtension) ? fileName : $"{fileName}.{fileExtension}")}";
 
-        protected string outputFilePath
+        public string OutputFilePath
         {
             get
             {
@@ -26,7 +32,7 @@ namespace Renard
             }
         }
 
-        protected string activationFilePath => $"{Application.persistentDataPath}/{fileFullName}";
+        public string ActivationFilePath => $"{Application.persistentDataPath}/{fileFullName}";
 
         public LicenseStatusEnum Status { get; protected set; } = LicenseStatusEnum.None;
 
@@ -53,7 +59,7 @@ namespace Renard
                 return _licenseConfig;
             }
         }
-        protected string encryptKey
+        protected string m_EncryptKey
         {
             get
             {
@@ -62,7 +68,7 @@ namespace Renard
                 return string.Empty;
             }
         }
-        protected string contentsId
+        public string m_ContentsId
         {
             get
             {
@@ -91,7 +97,7 @@ namespace Renard
 
                 // ライセンスコードを生成
                 var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data);
-                return OnEncryptAndSaveToFile(licenseCode, outputFilePath);
+                return OnEncryptAndSaveToFile(licenseCode, OutputFilePath);
             }
             catch (Exception ex)
             {
@@ -105,7 +111,7 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(encryptKey))
+                if (string.IsNullOrEmpty(m_EncryptKey))
                     throw new Exception("null or empty encryptKey.");
 
                 if (string.IsNullOrEmpty(licenseCode))
@@ -119,8 +125,8 @@ namespace Renard
 
                 using (Aes aesAlg = Aes.Create())
                 {
-                    aesAlg.Key = Encoding.UTF8.GetBytes(encryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(encryptKey);
+                    aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptKey);
 
                     ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
 
@@ -157,11 +163,11 @@ namespace Renard
                 }
 
                 // ライセンスコードを読込み
-                var licenseCode = OnDecryptFromFile(activationFilePath);
+                var licenseCode = OnDecryptFromFile(ActivationFilePath);
                 if (licenseCode == null || licenseCode.Length <= 0)
                 {
                     Status = LicenseStatusEnum.NotFile;
-                    throw new Exception($"not found file. path={activationFilePath}");
+                    throw new Exception($"not found file. path={ActivationFilePath}");
                 }
 
                 Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData);
@@ -177,7 +183,7 @@ namespace Renard
                     }
 
                     // contentsIdをチェック
-                    if (string.IsNullOrEmpty(contentsId) || contentsId != licenseData.ContentsId)
+                    if (string.IsNullOrEmpty(m_ContentsId) || m_ContentsId != licenseData.ContentsId)
                     {
                         Status = LicenseStatusEnum.Injustice;
                         throw new Exception($"injustice license. contentsId error.");
@@ -196,7 +202,7 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(encryptKey))
+                if (string.IsNullOrEmpty(m_EncryptKey))
                     throw new Exception("null or empty encryptKey.");
 
                 if (string.IsNullOrEmpty(filePath))
@@ -207,8 +213,8 @@ namespace Renard
 
                 using (Aes aesAlg = Aes.Create())
                 {
-                    aesAlg.Key = Encoding.UTF8.GetBytes(encryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(encryptKey);
+                    aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptKey);
 
                     ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
@@ -227,4 +233,114 @@ namespace Renard
             return string.Empty;
         }
     }
+
+#if UNITY_EDITOR
+
+    [CustomEditor(typeof(LicenseHandler))]
+    public class LicenseHandlerEditor : Editor
+    {
+        public override void OnInspectorGUI()
+        {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+
+            var handler = target as LicenseHandler;
+
+            if (GUILayout.Button("CreateWindow"))
+            {
+                CreateEditorWindow.ShowWindow(handler);
+            }
+
+            EditorGUILayout.Space();
+
+#endif
+
+            DrawDefaultInspector();
+        }
+
+        public class CreateEditorWindow : EditorWindow
+        {
+            private static LicenseHandler m_handler = null;
+            private static LicenseData m_createData = new LicenseData();
+
+            private int[] validityDaysList => new int[] { 7, 14, 21, 30, 60, 120, 180, 210, 240, 270, 300, 330, 365 };
+
+            private int _validityDaysIndex = 0;
+            private int _validityDays = 0;
+
+            public static void ShowWindow(LicenseHandler handler)
+            {
+                var window = GetWindow<CreateEditorWindow>();
+                window.titleContent = new GUIContent("License");
+                window.maxSize = new Vector2(400, 200);
+                window.minSize = new Vector2(400, 200);
+
+                m_handler = handler;
+
+                m_createData.Uuid = string.Empty;
+                m_createData.ContentsId = m_handler != null ? m_handler.m_ContentsId : string.Empty;
+                m_createData.CreateDate = DateTime.UtcNow;
+                m_createData.ValidityDays = 0;
+
+                window.Show();
+            }
+
+            private void OnGUI()
+            {
+                GUILayout.Label("Create License");
+
+                //-- 編集項目
+
+                m_createData.Uuid = EditorGUILayout.TextField("Uuid", m_createData.Uuid);
+
+                EditorGUILayout.BeginHorizontal();
+
+                EditorGUILayout.LabelField("ContentsId", new GUILayoutOption[] { GUILayout.Width(150) });
+
+                if (m_handler != null)
+                {
+                    if (GUILayout.Button("Default", new GUILayoutOption[] { GUILayout.Height(20) }))
+                    {
+                        m_createData.ContentsId = m_handler.m_ContentsId;
+                    }
+                }
+
+                m_createData.ContentsId = EditorGUILayout.TextField(m_createData.ContentsId);
+
+                EditorGUILayout.EndHorizontal();
+
+                var dayOptions = validityDaysList.Select(x => $"{x}day").ToArray();
+                _validityDaysIndex = EditorGUILayout.Popup("ValidityDays", _validityDaysIndex, dayOptions);
+
+                _validityDays = validityDaysList.Length <= _validityDaysIndex ? 0 : validityDaysList[_validityDaysIndex];
+
+                m_createData.CreateDate = DateTime.UtcNow;
+                m_createData.ValidityDays = _validityDays;
+
+                EditorGUILayout.LabelField($"ExpiryDate(utc) [{_validityDays}day]: {m_createData.CreateDate:yyyy-MM-dd} -> {m_createData.ExpiryDate:yyyy-MM-dd}");
+
+                //--
+
+                GUILayout.Space(EditorGUIUtility.singleLineHeight);
+
+                if (m_handler != null && m_createData.ValidityDays > 0)
+                {
+                    if (GUILayout.Button("Create", new GUILayoutOption[] { GUILayout.ExpandWidth(true) }))
+                    {
+                        GUILayout.Space(EditorGUIUtility.singleLineHeight);
+
+                        if (m_handler.Create(m_createData))
+                        {
+                            GUILayout.Label($"<color=yellow>Success</color>. path={m_handler.OutputFilePath}");
+                        }
+                        else
+                        {
+                            GUILayout.Label($"<color=red>Failed</color>.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+#endif
 }
