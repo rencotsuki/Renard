@@ -116,7 +116,7 @@ fastlane/report.xml
 *.toc
 
 # Renard ProductConfigs
-Assets/Renard/Resources/ApplicationVersion.asset
-Assets/Renard/Resources/ApplicationVersion.asset.meta
-Assets/Renard/Resources/LicenseConfig.asset
-Assets/Renard/Resources/LicenseConfig.asset.meta
+Renard/Resources/ApplicationVersion.asset
+Renard/Resources/ApplicationVersion.asset.meta
+Renard/Resources/LicenseConfig.asset
+Renard/Resources/LicenseConfig.asset.meta
