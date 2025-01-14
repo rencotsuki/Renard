@@ -7,6 +7,7 @@ using UnityEditor.Build.Reporting;
 
 namespace Renard
 {
+    [DefaultExecutionOrder(1)]
     public static class ApplicationVersionAssetExtensions
     {
         public static void Save(this ApplicationVersionAsset target)
