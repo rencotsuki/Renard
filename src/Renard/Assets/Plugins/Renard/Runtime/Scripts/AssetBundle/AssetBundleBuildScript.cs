@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS0436
+
+using System.IO;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
