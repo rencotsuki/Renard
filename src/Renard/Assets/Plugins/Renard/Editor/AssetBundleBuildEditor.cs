@@ -8,11 +8,14 @@ namespace Renard
     {
         private static bool IsEncrypt => false;
 
-        private static string OutputPath => $"{Application.dataPath}/../../Output";
+        private static string OutputPath()
+        {
+            return $"{Application.dataPath}/../../Output";
+        }
 
         private static void OnBuildAssetBundles(UnityEditor.BuildTarget target)
         {
-            AssetBundleBuildScript.BuildAssetBundles(target, OutputPath, IsEncrypt);
+            AssetBundleBuildScript.BuildAssetBundles(target, OutputPath(), IsEncrypt);
         }
 
         [UnityEditor.MenuItem("Renard/AssetBundle/SimulationMode", false, 3)]
