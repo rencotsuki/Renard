@@ -2,7 +2,7 @@
     "name": "Unity.Renard.Editor",
     "rootNamespace": "",
     "references": [
-        ""
+        "Unity.Renard"
     ],
     "includePlatforms": [
         "Editor"

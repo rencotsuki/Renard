@@ -1,9 +1,10 @@
 using UnityEngine;
 using UnityEditor;
-using Renard.AssetBundleUniTask;
 
 namespace Renard
 {
+    using AssetBundleUniTask;
+
     public static class AssetBundleBuildEditor
     {
         private static bool IsEncrypt => false;
