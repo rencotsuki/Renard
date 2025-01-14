@@ -4,10 +4,8 @@ namespace Renard
 {
     using AssetBundleUniTask;
 
-    public static class AssetBundleBuilder
+    public static class AssetBundleBuildEditor
     {
-#if UNITY_EDITOR
-
         private static bool IsEncrypt => false;
 
         private static string OutputPath()
@@ -77,7 +75,5 @@ namespace Renard
         }
 
 #endif
-
-#endif  // UNITY_EDITOR
     }
 }

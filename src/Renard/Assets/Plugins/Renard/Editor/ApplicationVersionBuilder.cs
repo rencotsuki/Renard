@@ -9,17 +9,16 @@ namespace Renard
 {
     public static class ApplicationVersionAssetExtensions
     {
-#if UNITY_EDITOR
         public static void Save(this ApplicationVersionAsset target)
         {
             if (target == null) return;
 
-            var fullPath = $"{ApplicationVersionAsset.Path}/{ApplicationVersionAsset.FileName}.{ApplicationVersionAsset.FileExtension}";
+            var fullPath = $"{ApplicationVersionUtil.Path}/{ApplicationVersionUtil.FileName}.{ApplicationVersionUtil.FileExtension}";
 
             try
             {
-                if (!Directory.Exists(ApplicationVersionAsset.Path))
-                    Directory.CreateDirectory(ApplicationVersionAsset.Path);
+                if (!Directory.Exists(ApplicationVersionUtil.Path))
+                    Directory.CreateDirectory(ApplicationVersionUtil.Path);
 
                 EditorUtility.SetDirty(target);
                 AssetDatabase.CreateAsset(target, fullPath);
@@ -32,11 +31,9 @@ namespace Renard
                 Debug.Log($"{target.GetType().Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
             }
         }
-#endif  // UNITY_EDITOR
     }
 
-#if UNITY_EDITOR
-    public class ApplicationVersionBuilder : IPreprocessBuildWithReport
+    public class ApplicationVersionEditor : IPreprocessBuildWithReport
     {
         public int callbackOrder { get { return 0; } }
 
@@ -60,5 +57,4 @@ namespace Renard
         [MenuItem("Assets/Create/Renard/ApplicationVersion")]
         private static void CreateApplicationVersionAsset() => OnSave();
     }
-#endif  // UNITY_EDITOR
 }

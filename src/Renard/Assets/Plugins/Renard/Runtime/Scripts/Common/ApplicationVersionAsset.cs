@@ -3,13 +3,16 @@ using UnityEngine;
 
 namespace Renard
 {
-    [Serializable]
-    public class ApplicationVersionAsset : ScriptableObject
+    public static class ApplicationVersionUtil
     {
         public const string Path = "Assets/Resources";
         public const string FileName = "ApplicationVersion";
         public const string FileExtension = "asset";
+    }
 
+    [Serializable]
+    public class ApplicationVersionAsset : ScriptableObject
+    {
         [SerializeField] private string _version = "0.0.0";
         public string Version => _version;
 
@@ -20,7 +23,7 @@ namespace Renard
         {
             try
             {
-                return Resources.Load<ApplicationVersionAsset>(FileName);
+                return Resources.Load<ApplicationVersionAsset>(ApplicationVersionUtil.FileName);
             }
             catch (Exception ex)
             {

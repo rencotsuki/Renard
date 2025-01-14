@@ -8,7 +8,7 @@ namespace Renard.AssetBundleUniTask
 {
     using Debuger;
 
-    public class AssetBundleBuildScript
+    public static class AssetBundleBuildScript
     {
 #if UNITY_EDITOR
 
