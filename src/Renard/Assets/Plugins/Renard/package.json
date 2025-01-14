@@ -1,0 +1,12 @@
+{
+    "name": "com.foxlive.renard",
+    "displayName": "Renard",
+    "author": { "name": "rencotsuki", "url": "" },
+    "version": "0.9.0",
+    "unity": "2022.3",
+    "description": "Renard to UnityPackage",
+    "keywords": [ "Renard" ],
+    "license": "MIT",
+    "category": "assets",
+    "dependencies": {}
+}
