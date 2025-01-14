@@ -4,7 +4,6 @@ namespace Renard
 {
     using AssetBundleUniTask;
 
-    [DefaultExecutionOrder(1)]
     public static class AssetBundleBuildEditor
     {
         private static bool IsEncrypt => false;
