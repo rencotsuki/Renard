@@ -7,32 +7,6 @@ using UnityEditor.Build.Reporting;
 
 namespace Renard
 {
-    public static class ApplicationVersionAssetExtensions
-    {
-        public static void Save(this ApplicationVersionAsset target)
-        {
-            if (target == null) return;
-
-            var fullPath = $"{ApplicationVersionUtil.Path}/{ApplicationVersionUtil.FileName}.{ApplicationVersionUtil.FileExtension}";
-
-            try
-            {
-                if (!Directory.Exists(ApplicationVersionUtil.Path))
-                    Directory.CreateDirectory(ApplicationVersionUtil.Path);
-
-                EditorUtility.SetDirty(target);
-                AssetDatabase.CreateAsset(target, fullPath);
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"{target.GetType().Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
-            }
-        }
-    }
-
     public class ApplicationVersionEditor : IPreprocessBuildWithReport
     {
         public int callbackOrder { get { return 0; } }

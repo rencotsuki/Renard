@@ -27,7 +27,7 @@ namespace Renard
             }
             catch (Exception ex)
             {
-                Debug.Log($"ApplicationVersionData::Load <color=red>error</color>. {ex.Message}");
+                Debug.Log($"{typeof(ApplicationVersionAsset).Name}::Load <color=red>error</color>. {ex.Message}");
                 return null;
             }
         }
@@ -36,6 +36,29 @@ namespace Renard
         {
             _version = version;
             _buildNumber = buildNumber;
+        }
+
+        public void Save()
+        {
+#if UNITY_EDITOR
+            var fullPath = $"{ApplicationVersionUtil.Path}/{ApplicationVersionUtil.FileName}.{ApplicationVersionUtil.FileExtension}";
+
+            try
+            {
+                if (!System.IO.Directory.Exists(ApplicationVersionUtil.Path))
+                    System.IO.Directory.CreateDirectory(ApplicationVersionUtil.Path);
+
+                UnityEditor.EditorUtility.SetDirty(this);
+                UnityEditor.AssetDatabase.CreateAsset(this, fullPath);
+
+                UnityEditor.AssetDatabase.SaveAssets();
+                UnityEditor.AssetDatabase.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{this.GetType().Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
+            }
+#endif
         }
     }
 }

@@ -4,9 +4,10 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace Renard.AssetBundleUniTask
+namespace Renard
 {
     using Debuger;
+    using AssetBundleUniTask;
 
     public static class AssetBundleBuildScript
     {
