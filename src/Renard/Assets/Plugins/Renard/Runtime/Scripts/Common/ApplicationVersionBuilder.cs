@@ -7,9 +7,9 @@ using UnityEditor.Build.Reporting;
 
 namespace Renard
 {
-    [DefaultExecutionOrder(1)]
     public static class ApplicationVersionAssetExtensions
     {
+#if UNITY_EDITOR
         public static void Save(this ApplicationVersionAsset target)
         {
             if (target == null) return;
@@ -32,9 +32,11 @@ namespace Renard
                 Debug.Log($"{target.GetType().Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
             }
         }
+#endif  // UNITY_EDITOR
     }
 
-    public class ApplicationVersionEditor : IPreprocessBuildWithReport
+#if UNITY_EDITOR
+    public class ApplicationVersionBuilder : IPreprocessBuildWithReport
     {
         public int callbackOrder { get { return 0; } }
 
@@ -58,4 +60,5 @@ namespace Renard
         [MenuItem("Assets/Create/Renard/ApplicationVersion")]
         private static void CreateApplicationVersionAsset() => OnSave();
     }
+#endif  // UNITY_EDITOR
 }
