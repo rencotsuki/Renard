@@ -324,6 +324,8 @@ namespace Renard
 
                 if (m_handler != null && m_createData.ValidityDays > 0)
                 {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+
                     if (GUILayout.Button("Create", new GUILayoutOption[] { GUILayout.ExpandWidth(true) }))
                     {
                         GUILayout.Space(EditorGUIUtility.singleLineHeight);
@@ -337,10 +339,12 @@ namespace Renard
                             GUILayout.Label($"<color=red>Failed</color>.");
                         }
                     }
+
+#endif
                 }
             }
         }
     }
 
 #endif
-}
+                }
