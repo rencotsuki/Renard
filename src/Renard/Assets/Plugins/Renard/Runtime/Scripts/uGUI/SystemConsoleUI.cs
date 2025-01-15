@@ -12,20 +12,25 @@ public static class SystemConsoleHandler
     public static bool IsOpenSystemWindow
         => console != null ? console.IsOpenSystemWindow : false;
 
+    /// <summary>SystemWindowを閉じる</summary>
     public static void CloseSystemWindow()
         => console?.CloseSystemWindow();
 
+    /// <summary>SystemWindowを開く ※ボタン無し、画面外タップでキャンセル操作</summary>
     public static void OpenSystemWindow(string title, string message, Action onClose = null)
-        => console?.OpenSystemWindow(title, message, null, string.Empty, onClose, string.Empty, true);
+        => console?.OpenSystemWindow(title, message, null, string.Empty, onClose, string.Empty, true, true);
 
-    public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel = "Done", bool frameOutButton = false)
-        => console?.OpenSystemWindow(title, message, onDone, doneLabel, null, string.Empty, frameOutButton);
+    /// <summary>SystemWindowを開く ※決定のみ、画面外タップで閉じる操作を選択可</summary>
+    public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, bool doneClose = true, bool frameOutButton = false)
+        => console?.OpenSystemWindow(title, message, onDone, doneLabel, null, string.Empty, doneClose, frameOutButton);
 
-    public static void OpenSystemWindow(string title, string message, Action onDone, Action onCancel, bool frameOutButton = false)
-        => console?.OpenSystemWindow(title, message, onDone, "Done", onCancel, "Cancel", frameOutButton);
+    /// <summary>SystemWindowを開く ※ボタンラベルは変更不可、初期：Done、Cancel、画面外タップで閉じる操作を選択可</summary>
+    public static void OpenSystemWindow(string title, string message, Action onDone, Action onCancel, bool doneClose = true, bool frameOutButton = false)
+        => console?.OpenSystemWindow(title, message, onDone, "Done", onCancel, "Cancel", doneClose, frameOutButton);
 
-    public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, Action onCancel, string cancelLabel, bool frameOutButton = false)
-        => console?.OpenSystemWindow(title, message, onDone, doneLabel, onCancel, cancelLabel, frameOutButton);
+    /// <summary>SystemWindowを開く</summary>
+    public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, Action onCancel, string cancelLabel, bool doneClose = true, bool frameOutButton = false)
+        => console?.OpenSystemWindow(title, message, onDone, doneLabel, onCancel, cancelLabel, doneClose, frameOutButton);
 }
 
 namespace Renard
@@ -78,6 +83,7 @@ namespace Renard
             }
         }
 
+        private bool _doneClose = false;
         private Action _systemWindowDoneAction = null;
         private Action _systemWindowCancelAction = null;
 
@@ -105,7 +111,8 @@ namespace Renard
             if (_systemWindowDoneAction != null)
                 _systemWindowDoneAction();
 
-            CloseSystemWindow();
+            if (_doneClose)
+                CloseSystemWindow();
         }
 
         private void OnClickSystemWindowCancel()
@@ -116,7 +123,7 @@ namespace Renard
             CloseSystemWindow();
         }
 
-        public void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, Action onCancel, string cancelLabel, bool frameOutButton)
+        public void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, Action onCancel, string cancelLabel, bool doneClose, bool frameOutButton)
         {
             if (systemWindowTitle != null)
                 systemWindowTitle.text = title;
@@ -130,7 +137,7 @@ namespace Renard
                 systemWindowDoneButton.gameObject.SetActive(!string.IsNullOrEmpty(doneLabel));
 
             if (systemWindowDoneLabel != null)
-                systemWindowDoneLabel.text = message;
+                systemWindowDoneLabel.text = doneLabel;
 
             _systemWindowCancelAction = onCancel;
 
@@ -138,7 +145,9 @@ namespace Renard
                 systemWindowCancelButton.gameObject.SetActive(!string.IsNullOrEmpty(cancelLabel));
 
             if (systemWindowCancelLabel != null)
-                systemWindowCancelLabel.text = message;
+                systemWindowCancelLabel.text = cancelLabel;
+
+            _doneClose = doneClose;
 
             if (systemWindowFrameOutButton != null)
                 systemWindowFrameOutButton.interactable = frameOutButton;

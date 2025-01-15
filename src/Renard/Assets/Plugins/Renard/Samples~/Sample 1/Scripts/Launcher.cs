@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace Renard
+namespace Renard.Sample
 {
     public class Launcher : MonoBehaviourCustom
     {
@@ -72,7 +72,13 @@ namespace Renard
                 Log(DebugerLogType.Info, "OnStartupAsync", $"{ex.Message}");
 
                 if (!token.IsCancellationRequested)
+                {
+#if UNITY_EDITOR
+                    UnityEditor.EditorApplication.isPlaying = false;
+#else
                     Application.Quit();
+#endif
+                }
             }
         }
 
@@ -93,22 +99,52 @@ namespace Renard
                 {
                     if (!skipLicense)
                     {
+                        var title = "ライセンス認証";
+                        var message = string.Empty;
+                        var errorMessage = string.Empty;
+                        var closeWindow = false;
+
                         // ファイルがない場合
-                        if (status != LicenseStatusEnum.NotFile)
+                        if (status == LicenseStatusEnum.NotFile)
                         {
                             // ライセンス発行の指示画面を表示
-                            throw new Exception("not found license.");
-                        }
+                            errorMessage = "not found license.";
 
-                        // ライセンスの有効期限切れ
-                        if (status != LicenseStatusEnum.Expired)
+                            message = $"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{DeviceUuidHandler.Uuid}</size>";
+
+                            SystemConsoleHandler.OpenSystemWindow(title, message,
+                                () =>
+                                {
+                                    GUIUtility.systemCopyBuffer = DeviceUuidHandler.Uuid;
+                                },
+                                "ｺｰﾄﾞｺﾋﾟｰ",
+                                false,
+                                true);
+                        }
+                        else if (status == LicenseStatusEnum.Expired)
                         {
-                            // ライセンス有効期限切れを表示
-                            throw new Exception("expired license.");
+                            if (status == LicenseStatusEnum.Expired)
+                            {
+                                // ライセンスの有効期限切れ
+                                errorMessage = "expired license.";
+
+                                message = $"ライセンスの有効期限が切れています\n\r有効期限: {licenseHandler.ExpiryDate}";
+                            }
+                            else
+                            {
+                                // ライセンスの不正を表示
+                                errorMessage = "injustice license.";
+
+                                message = "ライセンスが正しくありません";
+                            }
+
+                            SystemConsoleHandler.OpenSystemWindow(title, message, () => { closeWindow = true; });
                         }
 
-                        // ライセンスの不正を表示
-                        throw new Exception("injustice license.");
+                        await UniTask.WaitWhile(() => !closeWindow, cancellationToken: token);
+                        token.ThrowIfCancellationRequested();
+
+                        throw new Exception(errorMessage);
                     }
                 }
 

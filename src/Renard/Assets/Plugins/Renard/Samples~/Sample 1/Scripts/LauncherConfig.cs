@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace Renard
+namespace Renard.Sample
 {
     [Serializable]
     public class LauncherConfigData

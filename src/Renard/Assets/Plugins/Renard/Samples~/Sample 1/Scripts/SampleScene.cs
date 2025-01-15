@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Renard
+namespace Renard.Sample
 {
     [Serializable]
     public class SampleScene : MonoBehaviourCustom
