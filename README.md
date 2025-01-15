@@ -12,5 +12,5 @@ Install From
 　※検証用なのでPrivateRepositoryのまま行いたい  
 　　Win、Macどちらでも同じように使用したい  
 　　ということからPersonalAccessTokens(Classic)を利用しています。  
-　　git-sshのリンクを使おうと思ったがwindowsは環境やアカウントによって色々な問題が発生して、
+　　git-sshのリンクを使おうと思ったがwindowsは環境やアカウントによって色々な問題が発生して、  
 　　各プラットフォーム共通にするためにはこの方法が手っ取り早かった。  
