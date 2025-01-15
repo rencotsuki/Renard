@@ -1,12 +1,20 @@
 {
     "name": "com.foxlive.renard",
     "displayName": "Renard",
-    "author": { "name": "rencotsuki", "url": "" },
+    "author": {
+        "name": "rencotsuki",
+        "url": ""
+    },
     "version": "0.9.0",
-    "unity": "2022.3",
+    "unity": "6000.0",
     "description": "Renard to UnityPackage",
-    "keywords": [ "Renard" ],
+    "keywords": [
+        "Renard"
+    ],
     "license": "MIT",
     "category": "assets",
-    "dependencies": {}
+    "dependencies": {
+        "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+        "com.neuecc.unirx": "https://github.com/neuecc/UniRx.git?path=Assets/Plugins/UniRx/Scripts"
+    }
 }
