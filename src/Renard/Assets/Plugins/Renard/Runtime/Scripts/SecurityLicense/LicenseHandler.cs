@@ -18,21 +18,21 @@ namespace Renard
     {
         protected string fileName => $"License-{Application.productName}";
         protected string fileExtension => ""; //拡張子を付けられるようにしておく
-        protected string fileFullName => $"{(string.IsNullOrEmpty(fileExtension) ? fileName : $"{fileName}.{fileExtension}")}";
+        public string FileFullName => $"{(string.IsNullOrEmpty(fileExtension) ? fileName : $"{fileName}.{fileExtension}")}";
 
-        public string OutputFilePath
+        public string OutputPath
         {
             get
             {
 #if UNITY_EDITOR
-                return $"{Application.dataPath}/../../License_Output/{fileFullName}";
+                return $"{Application.dataPath}/../../License_Output";
 #else
-                return $"{Application.dataPath}/../License_Output/{fileFullName}";
+                return $"{Application.dataPath}/../License_Output";
 #endif
             }
         }
 
-        public string ActivationFilePath => $"{Application.persistentDataPath}/{fileFullName}";
+        public string ActivationFilePath => $"{Application.persistentDataPath}/{FileFullName}";
 
         public LicenseStatusEnum Status { get; protected set; } = LicenseStatusEnum.None;
 
@@ -80,6 +80,11 @@ namespace Renard
             }
         }
 
+        private void Awake()
+        {
+            isDebugLog = true;
+        }
+
 #if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
 
         /*
@@ -99,7 +104,7 @@ namespace Renard
 
                 // ライセンスコードを生成
                 var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data);
-                return OnEncryptAndSaveToFile(licenseCode, OutputFilePath);
+                return OnEncryptAndSaveToFile(licenseCode, OutputPath, FileFullName);
             }
             catch (Exception ex)
             {
@@ -109,7 +114,7 @@ namespace Renard
         }
 
         // 暗号化して保存
-        protected bool OnEncryptAndSaveToFile(string licenseCode, string filePath)
+        protected bool OnEncryptAndSaveToFile(string licenseCode, string outputPath, string fileName)
         {
             try
             {
@@ -119,11 +124,14 @@ namespace Renard
                 if (string.IsNullOrEmpty(licenseCode))
                     throw new Exception("null or empty licenseCode.");
 
-                if (string.IsNullOrEmpty(filePath))
-                    throw new Exception("null or empty filePath.");
+                if (string.IsNullOrEmpty(outputPath))
+                    throw new Exception("null or empty outputPath.");
 
-                if (!File.Exists(filePath))
-                    throw new Exception($"not found filePath. path={filePath}");
+                if (string.IsNullOrEmpty(fileName))
+                    throw new Exception("null or empty fileName.");
+
+                if (!Directory.Exists(outputPath))
+                    Directory.CreateDirectory(outputPath);
 
                 using (Aes aesAlg = Aes.Create())
                 {
@@ -132,7 +140,7 @@ namespace Renard
 
                     ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
 
-                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                    using (FileStream fs = new FileStream($"{outputPath}/{fileName}", FileMode.Create))
                     using (CryptoStream cs = new CryptoStream(fs, encryptor, CryptoStreamMode.Write))
                     using (StreamWriter sw = new StreamWriter(cs))
                     {
@@ -332,7 +340,7 @@ namespace Renard
 
                         if (m_handler.Create(m_createData))
                         {
-                            GUILayout.Label($"<color=yellow>Success</color>. path={m_handler.OutputFilePath}");
+                            GUILayout.Label($"<color=yellow>Success</color>. path={m_handler.OutputPath}/{m_handler.OutputPath}");
                         }
                         else
                         {
