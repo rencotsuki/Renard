@@ -24,7 +24,10 @@ namespace Renard.Sample
                 }
             }
 
-            SystemConsoleHandler.OpenSystemWindow("Sample", "起動成功！", null, "ＯＫ");
+            SystemConsoleHandler.SystemWindow
+                .SetMessage("Sample", "起動成功！")
+                .OnActionDone(null, "ＯＫ")
+                .Show();
         }
     }
 }

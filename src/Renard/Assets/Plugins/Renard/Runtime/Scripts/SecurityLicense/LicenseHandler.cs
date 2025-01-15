@@ -36,6 +36,8 @@ namespace Renard
 
         public LicenseStatusEnum Status { get; protected set; } = LicenseStatusEnum.None;
 
+        public static int[] ValidityDaysList => new int[] { 7, 14, 21, 30, 60, 120, 180, 210, 240, 270, 300, 330, 365 };
+
         protected LicenseData licenseData = default;
         public string Uuid => licenseData.Uuid;
         public string ContentsId => licenseData.ContentsId;
@@ -262,8 +264,6 @@ namespace Renard
             private static LicenseHandler m_handler = null;
             private static LicenseData m_createData = new LicenseData();
 
-            private int[] validityDaysList => new int[] { 7, 14, 21, 30, 60, 120, 180, 210, 240, 270, 300, 330, 365 };
-
             private int _validityDaysIndex = 0;
             private int _validityDays = 0;
 
@@ -308,10 +308,10 @@ namespace Renard
 
                 EditorGUILayout.EndHorizontal();
 
-                var dayOptions = validityDaysList.Select(x => $"{x}day").ToArray();
+                var dayOptions = LicenseHandler.ValidityDaysList.Select(x => $"{x}day").ToArray();
                 _validityDaysIndex = EditorGUILayout.Popup("ValidityDays", _validityDaysIndex, dayOptions);
 
-                _validityDays = validityDaysList.Length <= _validityDaysIndex ? 0 : validityDaysList[_validityDaysIndex];
+                _validityDays = LicenseHandler.ValidityDaysList.Length <= _validityDaysIndex ? 0 : LicenseHandler.ValidityDaysList[_validityDaysIndex];
 
                 m_createData.CreateDate = DateTime.UtcNow;
                 m_createData.ValidityDays = _validityDays;

@@ -55,6 +55,8 @@ MonoBehaviour:
   root: {fileID: 4208928603438942368}
   canvasGroupSystemWindow: {fileID: 203000561459583451}
   systemWindowFrameOutButton: {fileID: 4060533190559430459}
+  systemWindowFrame: {fileID: 7480642405809748619}
+  systemWindowBorder: {fileID: 362197821401325082}
   systemWindowTitle: {fileID: 7764942215364015864}
   systemWindowMessage: {fileID: 2298206186702375258}
   systemWindowDoneButton: {fileID: 5600040046002848099}
@@ -252,7 +254,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.09433961, g: 0.09433961, b: 0.09433961, a: 0.5019608}
+  m_Color: {r: 0.09433961, g: 0.09433961, b: 0.09433961, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

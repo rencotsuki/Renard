@@ -21,6 +21,8 @@ namespace Renard.Sample
                 if (!LicenseSimulation)
                     return true;
 #endif
+                if (configData != null && configData.SkipLicense)
+                    return true;
                 return false;
             }
         }
@@ -112,14 +114,21 @@ namespace Renard.Sample
 
                             message = $"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{DeviceUuidHandler.Uuid}</size>";
 
-                            SystemConsoleHandler.OpenSystemWindow(title, message,
+                            SystemConsoleHandler.SystemWindow
+                                .SetMessage(title, message, true)
+                                .OnActionDone(
                                 () =>
                                 {
                                     GUIUtility.systemCopyBuffer = DeviceUuidHandler.Uuid;
                                 },
                                 "ｺｰﾄﾞｺﾋﾟｰ",
-                                false,
-                                true);
+                                false)
+                                .OnActionClose(
+                                () =>
+                                {
+                                    closeWindow = true;
+                                })
+                                .Show();
                         }
                         else if (status == LicenseStatusEnum.Expired)
                         {
@@ -138,7 +147,9 @@ namespace Renard.Sample
                                 message = "ライセンスが正しくありません";
                             }
 
-                            SystemConsoleHandler.OpenSystemWindow(title, message, () => { closeWindow = true; });
+                            SystemConsoleHandler.SystemWindow
+                                .SetMessage(title, message, true)
+                                .OnActionClose(() => { closeWindow = true; });
                         }
 
                         await UniTask.WaitWhile(() => !closeWindow, cancellationToken: token);

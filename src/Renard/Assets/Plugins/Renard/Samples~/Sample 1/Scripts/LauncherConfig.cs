@@ -8,6 +8,7 @@ namespace Renard.Sample
     public class LauncherConfigData
     {
         public int TargetFrameRate = LauncherConfig.DefaultTargetFrameRate;
+        public bool SkipLicense = false;
         public string FirstSceneName = LauncherConfig.DefaultFirstSceneName;
         public string[] additiveScenes = LauncherConfig.DefaultAdditiveScenes;
     }
