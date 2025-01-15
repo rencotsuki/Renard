@@ -12,23 +12,23 @@ public static class SystemConsoleHandler
     public static bool IsOpenSystemWindow
         => console != null ? console.IsOpenSystemWindow : false;
 
-    /// <summary>SystemWindow‚ğ•Â‚¶‚é</summary>
+    /// <summary>SystemWindowã‚’é–‰ã˜ã‚‹</summary>
     public static void CloseSystemWindow()
         => console?.CloseSystemWindow();
 
-    /// <summary>SystemWindow‚ğŠJ‚­ ¦ƒ{ƒ^ƒ“–³‚µA‰æ–ÊŠOƒ^ƒbƒv‚ÅƒLƒƒƒ“ƒZƒ‹‘€ì</summary>
+    /// <summary>SystemWindowã‚’é–‹ã â€»ãƒœã‚¿ãƒ³ç„¡ã—ã€ç”»é¢å¤–ã‚¿ãƒƒãƒ—ã§ã‚­ãƒ£ãƒ³ã‚»ãƒ«æ“ä½œ</summary>
     public static void OpenSystemWindow(string title, string message, Action onClose = null)
         => console?.OpenSystemWindow(title, message, null, string.Empty, onClose, string.Empty, true, true);
 
-    /// <summary>SystemWindow‚ğŠJ‚­ ¦Œˆ’è‚Ì‚İA‰æ–ÊŠOƒ^ƒbƒv‚Å•Â‚¶‚é‘€ì‚ğ‘I‘ğ‰Â</summary>
+    /// <summary>SystemWindowã‚’é–‹ã â€»æ±ºå®šã®ã¿ã€ç”»é¢å¤–ã‚¿ãƒƒãƒ—ã§é–‰ã˜ã‚‹æ“ä½œã‚’é¸æŠå¯</summary>
     public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, bool doneClose = true, bool frameOutButton = false)
         => console?.OpenSystemWindow(title, message, onDone, doneLabel, null, string.Empty, doneClose, frameOutButton);
 
-    /// <summary>SystemWindow‚ğŠJ‚­ ¦ƒ{ƒ^ƒ“ƒ‰ƒxƒ‹‚Í•ÏX•s‰ÂA‰ŠúFDoneACancelA‰æ–ÊŠOƒ^ƒbƒv‚Å•Â‚¶‚é‘€ì‚ğ‘I‘ğ‰Â</summary>
+    /// <summary>SystemWindowã‚’é–‹ã â€»ãƒœã‚¿ãƒ³ãƒ©ãƒ™ãƒ«ã¯å¤‰æ›´ä¸å¯ã€åˆæœŸï¼šDoneã€Cancelã€ç”»é¢å¤–ã‚¿ãƒƒãƒ—ã§é–‰ã˜ã‚‹æ“ä½œã‚’é¸æŠå¯</summary>
     public static void OpenSystemWindow(string title, string message, Action onDone, Action onCancel, bool doneClose = true, bool frameOutButton = false)
         => console?.OpenSystemWindow(title, message, onDone, "Done", onCancel, "Cancel", doneClose, frameOutButton);
 
-    /// <summary>SystemWindow‚ğŠJ‚­</summary>
+    /// <summary>SystemWindowã‚’é–‹ã</summary>
     public static void OpenSystemWindow(string title, string message, Action onDone, string doneLabel, Action onCancel, string cancelLabel, bool doneClose = true, bool frameOutButton = false)
         => console?.OpenSystemWindow(title, message, onDone, doneLabel, onCancel, cancelLabel, doneClose, frameOutButton);
 }
