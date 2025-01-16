@@ -32,7 +32,7 @@ namespace Renard.Sample
             get
             {
 #if UNITY_EDITOR
-                if (!SkipLicense)
+                if (SkipLicense)
                     return true;
 #endif
                 if (configData != null && configData.SkipLicense)
