@@ -6,32 +6,21 @@ namespace Renard.AssetBundleUniTask
 {
     public static class AssetBundleEditor
     {
-#if UNITY_EDITOR
-        private static int _isSimulateMode = -1;
-        private const string _simulateMode = "SimulateAssetBundles";
-#endif
-        public static bool IsSimulateMode
+        private static AssetBundleConfigAsset assetBundleConfig = null;
+
+        private static bool LoadAssetBundleConfig()
         {
-            get
+            try
             {
-#if UNITY_EDITOR
-                if (_isSimulateMode == -1)
-                    _isSimulateMode = EditorPrefs.GetBool(_simulateMode, true) ? 1 : 0;
-                return _isSimulateMode != 0;
-#else
-                return false;
-#endif
+                assetBundleConfig = AssetBundleConfigAsset.Load();
+                if (assetBundleConfig == null)
+                    throw new Exception("not found assetBundleConfig.");
+                return  true;
             }
-            set
+            catch
             {
-#if UNITY_EDITOR
-                int newValue = value ? 1 : 0;
-                if (newValue != _isSimulateMode)
-                {
-                    _isSimulateMode = newValue;
-                    EditorPrefs.SetBool(_simulateMode, value);
-                }
-#endif
+                Debug.Log("<color=yellow>【重要】</color> AssetBundleConfig.assetがResources下に定義されていません");
+                return false;
             }
         }
 
@@ -39,7 +28,8 @@ namespace Renard.AssetBundleUniTask
         {
             try
             {
-                var assetBundleConfig = AssetBundleConfigAsset.Load();
+                if (assetBundleConfig == null)
+                    throw new Exception("not found assetBundleConfig.");
 
                 var outputPath = string.IsNullOrEmpty(assetBundleConfig.OutputPath) ?
                                     $"{Application.dataPath}/../../{AssetBundleManager.DefaultOutputPath}" :
@@ -58,19 +48,22 @@ namespace Renard.AssetBundleUniTask
         [MenuItem("Renard/AssetBundle/SimulationMode", false, 3)]
         public static void ToggleSimulationMode()
         {
-            IsSimulateMode = !IsSimulateMode;
+            AssetBundleManager.IsSimulateMode = !AssetBundleManager.IsSimulateMode;
         }
 
         [MenuItem("Renard/AssetBundle/SimulationMode", true, 3)]
         public static bool ToggleSimulationModeValidate()
         {
-            Menu.SetChecked("Renard/AssetBundle/SimulationMode", IsSimulateMode);
+            Menu.SetChecked("Renard/AssetBundle/SimulationMode", AssetBundleManager.IsSimulateMode);
             return true;
         }
 
         [MenuItem("Renard/AssetBundle/Build/Win", false)]
         public static void BuildAssetBundlesWin()
         {
+            if (!LoadAssetBundleConfig())
+                return;
+
 #if UNITY_EDITOR_WIN
             // 64ビットなのかを見て作成する
             OnBuildAssetBundles(Environment.Is64BitProcess ? BuildTarget.StandaloneWindows64 : BuildTarget.StandaloneWindows);
@@ -82,12 +75,18 @@ namespace Renard.AssetBundleUniTask
         [MenuItem("Renard/AssetBundle/Build/Android", false)]
         public static void BuildAssetBundlesAndroid()
         {
+            if (!LoadAssetBundleConfig())
+                return;
+
             OnBuildAssetBundles(BuildTarget.Android);
         }
 
         [MenuItem("Renard/AssetBundle/Build/OSX", false)]
         public static void BuildAssetBundlesOSX()
         {
+            if (!LoadAssetBundleConfig())
+                return;
+
 #if UNITY_EDITOR_OSX
             OnBuildAssetBundles(BuildTarget.StandaloneOSX);
 #else
@@ -98,6 +97,9 @@ namespace Renard.AssetBundleUniTask
         [MenuItem("Renard/AssetBundle/Build/iOS", false)]
         public static void BuildAssetBundlesiOS()
         {
+            if (!LoadAssetBundleConfig())
+                return;
+
 #if UNITY_EDITOR_OSX
             OnBuildAssetBundles(BuildTarget.iOS);
 #else
@@ -108,6 +110,9 @@ namespace Renard.AssetBundleUniTask
         [MenuItem("Renard/AssetBundle/Build/ALL", false)]
         public static void BuildAssetBundlesAllTarget()
         {
+            if (!LoadAssetBundleConfig())
+                return;
+
             BuildAssetBundlesWin();
             BuildAssetBundlesAndroid();
             BuildAssetBundlesOSX();

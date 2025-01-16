@@ -33,15 +33,33 @@ namespace Renard
         public bool IsDiffData { get; private set; } = false;
 
         public bool IsServer { get; private set; } = false;
-        public bool IsSimulateMode
+
+#if UNITY_EDITOR
+        private static int _isSimulateMode = -1;
+        private const string _simulateMode = "SimulateAssetBundles";
+#endif
+        public static bool IsSimulateMode
         {
             get
             {
-//#if UNITY_EDITOR
-//                if (AssetBundleEditor.IsSimulateMode)
-//                    return true;
-//#endif
+#if UNITY_EDITOR
+                if (_isSimulateMode == -1)
+                    _isSimulateMode = EditorPrefs.GetBool(_simulateMode, true) ? 1 : 0;
+                return _isSimulateMode != 0;
+#else
                 return false;
+#endif
+            }
+            set
+            {
+#if UNITY_EDITOR
+                int newValue = value ? 1 : 0;
+                if (newValue != _isSimulateMode)
+                {
+                    _isSimulateMode = newValue;
+                    EditorPrefs.SetBool(_simulateMode, value);
+                }
+#endif
             }
         }
 
