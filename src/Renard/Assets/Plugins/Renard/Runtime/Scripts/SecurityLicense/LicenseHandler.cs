@@ -171,14 +171,24 @@ namespace Renard
                 }
 
                 var localPathTrim = string.IsNullOrEmpty(localPath) ? string.Empty : localPath.TrimStart().TrimEnd();
-                var filePath = string.IsNullOrEmpty(localPathTrim) ? $"{activationFilePath}/{FileFullName}" : $"{activationFilePath}/{localPathTrim}/{FileFullName}";
+                var filePath = string.IsNullOrEmpty(localPathTrim) ? activationFilePath : $"{activationFilePath}/{localPathTrim}";
+
+                // ライセンスコードの格納先を確認
+                if (!Directory.Exists(filePath))
+                {
+                    // ディレクトリは変わらないので作成しておく
+                    Directory.CreateDirectory(filePath);
+
+                    Status = LicenseStatusEnum.NotFile;
+                    throw new Exception($"not found file. path={filePath}/{FileFullName}");
+                }
 
                 // ライセンスコードを読込み
-                var licenseCode = OnDecryptFromFile(filePath);
+                var licenseCode = OnDecryptFromFile($"{filePath}/{FileFullName}");
                 if (licenseCode == null || licenseCode.Length <= 0)
                 {
                     Status = LicenseStatusEnum.NotFile;
-                    throw new Exception($"not found file. path={filePath}");
+                    throw new Exception($"not found file. path={filePath}/{FileFullName}");
                 }
 
                 Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData);
