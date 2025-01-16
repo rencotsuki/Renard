@@ -47,6 +47,10 @@ namespace Renard.AssetBundleUniTask
         [UnityEditor.MenuItem("Assets/Create/Renard/AssetBundleConfig")]
         private static void CreateAssetBundleConfigAsset()
         {
+            // １回ロードしてAssetが存在するか確認する
+            if (AssetBundleConfigAsset.Load() != null)
+                return;
+
             var result = new AssetBundleConfigAsset();
             var fullPath = $"{AssetBundleConfigAsset.Path}/{AssetBundleConfigAsset.FileName}.{AssetBundleConfigAsset.FileExtension}";
 

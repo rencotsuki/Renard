@@ -65,10 +65,15 @@ namespace Renard
         [MenuItem("Assets/Create/Renard/ApplicationVersion")]
         private static void CreateApplicationVersionAsset()
         {
+            // １回ロードしてAssetが存在するか確認する
+            if (ApplicationVersionAsset.Load() != null)
+                return;
+
             var fullPath = $"{ApplicationVersionAsset.Path}/{ApplicationVersionAsset.FileName}.{ApplicationVersionAsset.FileExtension}";
 
             try
             {
+
                 if (!Directory.Exists(ApplicationVersionAsset.Path))
                     Directory.CreateDirectory(ApplicationVersionAsset.Path);
 

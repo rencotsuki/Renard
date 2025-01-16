@@ -58,10 +58,10 @@ namespace Renard.Sample
             IsDebugLog = true;
             licenseHandler.IsDebugLog = IsDebugLog;
 
-            var config = LauncherConfig.Load();
+            var config = LauncherConfigAsset.Load();
             configData = config?.GetConfig();
 
-            Application.targetFrameRate = configData != null ? configData.TargetFrameRate : LauncherConfig.DefaultTargetFrameRate;
+            Application.targetFrameRate = configData != null ? configData.TargetFrameRate : LauncherConfigAsset.DefaultTargetFrameRate;
         }
 
         private void Start()
@@ -97,7 +97,7 @@ namespace Renard.Sample
                 await UniTask.WaitWhile(() => !SplashScreen.isFinished, cancellationToken: token);
                 token.ThrowIfCancellationRequested();
 
-                await SceneManager.LoadSceneAsync(configData != null ? configData.FirstSceneName : LauncherConfig.DefaultFirstSceneName, LoadSceneMode.Single);
+                await SceneManager.LoadSceneAsync(configData != null ? configData.FirstSceneName : LauncherConfigAsset.DefaultFirstSceneName, LoadSceneMode.Single);
                 token.ThrowIfCancellationRequested();
 
                 if (configData != null && configData.additiveScenes.Length > 0)

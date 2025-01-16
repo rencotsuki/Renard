@@ -50,6 +50,10 @@ namespace Renard.License
         [UnityEditor.MenuItem("Assets/Create/Renard/LicenseConfig")]
         private static void CreateLicenseConfigAsset()
         {
+            // １回ロードしてAssetが存在するか確認する
+            if (LicenseConfigAsset.Load() != null)
+                return;
+
             var result = new LicenseConfigAsset();
             var fullPath = $"{LicenseConfigAsset.Path}/{LicenseConfigAsset.FileName}.{LicenseConfigAsset.FileExtension}";
 

@@ -1,21 +1,24 @@
 using System;
 using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Renard.Sample
 {
     [Serializable]
     public class LauncherConfigData
     {
-        public int TargetFrameRate = LauncherConfig.DefaultTargetFrameRate;
+        public int TargetFrameRate = LauncherConfigAsset.DefaultTargetFrameRate;
         public bool SkipLicense = false;
         public string LicenseLocalPath = LicenseHandler.DefaultLocalPath;
-        public string FirstSceneName = LauncherConfig.DefaultFirstSceneName;
-        public string[] additiveScenes = LauncherConfig.DefaultAdditiveScenes;
+        public string FirstSceneName = LauncherConfigAsset.DefaultFirstSceneName;
+        public string[] additiveScenes = LauncherConfigAsset.DefaultAdditiveScenes;
     }
 
     [Serializable]
-    public class LauncherConfig : ScriptableObject
+    public class LauncherConfigAsset : ScriptableObject
     {
         public const string Path = "Assets/Resources";
         public const string FileName = "LauncherConfig";
@@ -41,9 +44,9 @@ namespace Renard.Sample
         [SerializeField] private LauncherConfigData android = new LauncherConfigData();
         [SerializeField] private LauncherConfigData other = new LauncherConfigData();
 
-        public static LauncherConfig Load()
+        public static LauncherConfigAsset Load()
         {
-            return Resources.Load<LauncherConfig>(FileName);
+            return Resources.Load<LauncherConfigAsset>(FileName);
         }
 
         public LauncherConfigData GetConfig()
@@ -53,23 +56,23 @@ namespace Renard.Sample
             ApplicationVersion.MinBuildVersion = minBuildNumber;
 
 #if UNITY_EDITOR
-            if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.StandaloneWindows ||
-                UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.StandaloneWindows64)
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows ||
+                EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64)
             {
                 return windows;
             }
 
-            if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.StandaloneOSX)
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX)
             {
                 return osx;
             }
 
-            if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.iOS)
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS)
             {
                 return ios;
             }
 
-            if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.Android)
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android)
             {
                 return android;
             }
@@ -104,22 +107,26 @@ namespace Renard.Sample
 
     public static class LauncherConfigEditor
     {
-        [UnityEditor.MenuItem("Assets/Create/Renard/LauncherConfig")]
+        [MenuItem("Assets/Create/Renard/LauncherConfig")]
         private static void CreateLicenseConfigAsset()
         {
-            var result = new LauncherConfig();
-            var fullPath = $"{LauncherConfig.Path}/{LauncherConfig.FileName}.{LauncherConfig.FileExtension}";
+            // １回ロードしてAssetが存在するか確認する
+            if (LauncherConfigAsset.Load() != null)
+                return;
+
+            var result = new LauncherConfigAsset();
+            var fullPath = $"{LauncherConfigAsset.Path}/{LauncherConfigAsset.FileName}.{LauncherConfigAsset.FileExtension}";
 
             try
             {
-                if (!Directory.Exists(LauncherConfig.Path))
-                    Directory.CreateDirectory(LauncherConfig.Path);
+                if (!Directory.Exists(LauncherConfigAsset.Path))
+                    Directory.CreateDirectory(LauncherConfigAsset.Path);
 
-                UnityEditor.EditorUtility.SetDirty(result);
-                UnityEditor.AssetDatabase.CreateAsset(result, fullPath);
+                EditorUtility.SetDirty(result);
+                AssetDatabase.CreateAsset(result, fullPath);
 
-                UnityEditor.AssetDatabase.SaveAssets();
-                UnityEditor.AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
             catch (Exception ex)
             {
