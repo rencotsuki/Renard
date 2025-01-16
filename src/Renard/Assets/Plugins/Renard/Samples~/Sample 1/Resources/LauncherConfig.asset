@@ -17,15 +17,15 @@ MonoBehaviour:
   minBuildNumber: 0
   windows:
     TargetFrameRate: 60
-    SkipLicense: 1
+    SkipLicense: 0
     LicenseLocalPath: 
-    FirstSceneName: CreateLicenseApp
+    FirstSceneName: Sample
     additiveScenes: []
   osx:
     TargetFrameRate: 60
-    SkipLicense: 1
+    SkipLicense: 0
     LicenseLocalPath: 
-    FirstSceneName: CreateLicenseApp
+    FirstSceneName: Sample
     additiveScenes: []
   ios:
     TargetFrameRate: 60

@@ -15,6 +15,18 @@ namespace Renard.Sample
 
         protected LauncherConfigData configData = null;
 
+        protected bool createLicenseMode
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (CreateLicenseMode)
+                    return true;
+#endif
+                return false;
+            }
+        }
+
         protected bool skipLicense
         {
             get
@@ -59,6 +71,18 @@ namespace Renard.Sample
         {
             try
             {
+                if (createLicenseMode)
+                {
+                    // スプラッシュ表示が完了しているか確認する
+                    await UniTask.WaitWhile(() => !SplashScreen.isFinished, cancellationToken: token);
+                    token.ThrowIfCancellationRequested();
+
+                    await SceneManager.LoadSceneAsync("CreateLicenseApp", LoadSceneMode.Single);
+                    token.ThrowIfCancellationRequested();
+
+                    return;
+                }
+
                 // ライセンス確認
                 if (!await CheckLicenseAsync(token))
                     throw new Exception("license error.");
@@ -187,6 +211,34 @@ namespace Renard.Sample
         }
 
 #if UNITY_EDITOR
+        private static int _isCreateLicenseMode = -1;
+        private const string _createLicenseMode = "CreateLicenseMode";
+
+        protected static bool CreateLicenseMode
+        {
+            get
+            {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+                if (_isCreateLicenseMode == -1)
+                    _isCreateLicenseMode = UnityEditor.EditorPrefs.GetBool(_createLicenseMode, true) ? 1 : 0;
+                return _isCreateLicenseMode != 0;
+#else
+                return false;
+#endif
+            }
+            set
+            {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+                int newValue = value ? 1 : 0;
+                if (newValue != _isCreateLicenseMode)
+                {
+                    _isCreateLicenseMode = newValue;
+                    UnityEditor.EditorPrefs.SetBool(_createLicenseMode, value);
+#endif
+                }
+            }
+        }
+
         private static int _isLicenseSimulation = -1;
         private const string _licenseSimulation = "LicenseSimulation";
 
@@ -207,6 +259,19 @@ namespace Renard.Sample
                     UnityEditor.EditorPrefs.SetBool(_licenseSimulation, value);
                 }
             }
+        }
+
+        [UnityEditor.MenuItem("Renard/License/CreateMode", false, 3)]
+        public static void ToggleCreateLicenseModeSimulation()
+        {
+            CreateLicenseMode = !CreateLicenseMode;
+        }
+
+        [UnityEditor.MenuItem("Renard/License/CreateMode", true, 3)]
+        public static bool ToggleCreateLicenseModeSimulationValidate()
+        {
+            UnityEditor.Menu.SetChecked("Renard/License/CreateMode", CreateLicenseMode);
+            return true;
         }
 
         [UnityEditor.MenuItem("Renard/License/IsCheck", false, 3)]
