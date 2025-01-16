@@ -6,7 +6,6 @@ using UnityEngine;
 
 #if UNITY_EDITOR
 using System.Linq;
-using UnityEngine.UIElements;
 using UnityEditor;
 #endif
 
@@ -20,19 +19,31 @@ namespace Renard
         protected string fileExtension => ""; //拡張子を付けられるようにしておく
         public string FileFullName => $"{(string.IsNullOrEmpty(fileExtension) ? fileName : $"{fileName}.{fileExtension}")}";
 
+        public const string DefaultLocalPath = "License";
+
         public string OutputPath
         {
             get
             {
 #if UNITY_EDITOR
-                return $"{Application.dataPath}/../../License_Output";
+                return $"{Application.dataPath}/../../CreateLicenses";
 #else
-                return $"{Application.dataPath}/../License_Output";
+                return $"{Application.dataPath}/../CreateLicenses";
 #endif
             }
         }
 
-        public string ActivationFilePath => $"{Application.persistentDataPath}/{FileFullName}";
+        protected string activationFilePath
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return $"{Application.dataPath}/../..";
+#else
+                return Application.persistentDataPath;
+#endif
+            }
+        }
 
         public LicenseStatusEnum Status { get; protected set; } = LicenseStatusEnum.None;
 
@@ -78,11 +89,6 @@ namespace Renard
                     return licenseConfig.ContentsId;
                 return string.Empty;
             }
-        }
-
-        private void Awake()
-        {
-            isDebugLog = true;
         }
 
 #if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
@@ -159,7 +165,7 @@ namespace Renard
 #endif
 
         /// <summary>ライセンス確認</summary>
-        public LicenseStatusEnum Activation(string uuid)
+        public LicenseStatusEnum Activation(string uuid, string localPath = DefaultLocalPath)
         {
             Status = LicenseStatusEnum.None;
             licenseData = default;
@@ -172,12 +178,15 @@ namespace Renard
                     throw new Exception("not found licenseConfig.");
                 }
 
+                var localPathTrim = string.IsNullOrEmpty(localPath) ? string.Empty : localPath.TrimStart().TrimEnd();
+                var filePath = string.IsNullOrEmpty(localPathTrim) ? $"{activationFilePath}/{FileFullName}" : $"{activationFilePath}/{localPathTrim}/{FileFullName}";
+
                 // ライセンスコードを読込み
-                var licenseCode = OnDecryptFromFile(ActivationFilePath);
+                var licenseCode = OnDecryptFromFile(filePath);
                 if (licenseCode == null || licenseCode.Length <= 0)
                 {
                     Status = LicenseStatusEnum.NotFile;
-                    throw new Exception($"not found file. path={ActivationFilePath}");
+                    throw new Exception($"not found file. path={filePath}");
                 }
 
                 Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData);

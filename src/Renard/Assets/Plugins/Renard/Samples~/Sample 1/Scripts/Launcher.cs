@@ -11,6 +11,8 @@ namespace Renard.Sample
     {
         [SerializeField] protected LicenseHandler licenseHandler = null;
 
+        protected string uuid => DeviceUuidHandler.Uuid;
+
         protected LauncherConfigData configData = null;
 
         protected bool skipLicense
@@ -27,12 +29,20 @@ namespace Renard.Sample
             }
         }
 
+        protected string licenseLocalPath
+        {
+            get
+            {
+                if (configData != null)
+                    return configData.LicenseLocalPath;
+                return LicenseHandler.DefaultLocalPath;
+            }
+        }
+
         private CancellationTokenSource _startupToken = null;
 
         private void Awake()
         {
-            isDebugLog = true;
-
             var config = LauncherConfig.Load();
             configData = config?.GetConfig();
 
@@ -88,15 +98,22 @@ namespace Renard.Sample
         {
             try
             {
-                if (string.IsNullOrEmpty(DeviceUuidHandler.Uuid))
+                if (string.IsNullOrEmpty(uuid))
                 {
-                    // エラーコード発行
+                    var closeWindow = false;
+
+                    SystemConsoleHandler.SystemWindow
+                        .SetMessage("起動エラー", "情報の取得に失敗しました", true)
+                        .Show();
+
+                    await UniTask.WaitWhile(() => !closeWindow, cancellationToken: token);
+                    token.ThrowIfCancellationRequested();
 
                     throw new Exception("null or empty uuid.");
                 }
 
                 // ライセンスを確認
-                var status = licenseHandler.Activation(DeviceUuidHandler.Uuid);
+                var status = licenseHandler.Activation(uuid, licenseLocalPath);
                 if (status != LicenseStatusEnum.Success)
                 {
                     if (!skipLicense)
@@ -112,14 +129,14 @@ namespace Renard.Sample
                             // ライセンス発行の指示画面を表示
                             errorMessage = "not found license.";
 
-                            message = $"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{DeviceUuidHandler.Uuid}</size>";
+                            message = $"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>";
 
                             SystemConsoleHandler.SystemWindow
                                 .SetMessage(title, message, true)
                                 .OnActionDone(
                                 () =>
                                 {
-                                    GUIUtility.systemCopyBuffer = DeviceUuidHandler.Uuid;
+                                    GUIUtility.systemCopyBuffer = uuid;
                                 },
                                 "ｺｰﾄﾞｺﾋﾟｰ",
                                 false)

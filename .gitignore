@@ -134,7 +134,8 @@ Assets/WSATestCertificate.pfx
 
 # Unity
 .vsconfig
-src/License_Output/*
+src/CreateLicenses/*
+src/License/*
 src/Renard/Library/*
 src/Renard/Temp/*
 src/Renard/Logs/*

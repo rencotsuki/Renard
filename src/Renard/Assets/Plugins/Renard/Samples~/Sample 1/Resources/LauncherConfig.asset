@@ -13,30 +13,35 @@ MonoBehaviour:
   m_Name: LauncherConfig
   m_EditorClassIdentifier: 
   copyrightFirstYear: 2025
-  minAppVersion: 
+  minAppVersion: 0.9.0
   minBuildNumber: 0
   windows:
     TargetFrameRate: 60
     SkipLicense: 1
+    LicenseLocalPath: 
     FirstSceneName: CreateLicenseApp
     additiveScenes: []
   osx:
     TargetFrameRate: 60
     SkipLicense: 1
+    LicenseLocalPath: 
     FirstSceneName: CreateLicenseApp
     additiveScenes: []
   ios:
     TargetFrameRate: 60
     SkipLicense: 0
+    LicenseLocalPath: 
     FirstSceneName: Sample
     additiveScenes: []
   android:
     TargetFrameRate: 60
     SkipLicense: 0
+    LicenseLocalPath: 
     FirstSceneName: Sample
     additiveScenes: []
   other:
     TargetFrameRate: 60
     SkipLicense: 0
+    LicenseLocalPath: 
     FirstSceneName: Sample
     additiveScenes: []
