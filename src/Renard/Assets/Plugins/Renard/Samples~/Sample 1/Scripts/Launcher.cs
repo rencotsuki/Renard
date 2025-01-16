@@ -237,8 +237,8 @@ namespace Renard.Sample
                 {
                     _isCreateLicenseMode = newValue;
                     UnityEditor.EditorPrefs.SetBool(_createLicenseMode, value);
-#endif
                 }
+#endif
             }
         }
 
