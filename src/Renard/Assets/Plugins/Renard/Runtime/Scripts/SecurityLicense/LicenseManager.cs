@@ -50,12 +50,6 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-
-        /*
-         * 配布側のアプリでは動作させない
-         */
-
         /// <summary>ライセンス生成</summary>
         public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data)
         {
@@ -123,8 +117,6 @@ namespace Renard.License
             }
             return string.Empty;
         }
-
-#endif
 
         /// <summary>ライセンス読込み ※ここでは日付のみチェックする</summary>
         public static LicenseStatusEnum ValidateLicense(LicenseConfigAsset configAsset, string licenseCode, out LicenseData date)
