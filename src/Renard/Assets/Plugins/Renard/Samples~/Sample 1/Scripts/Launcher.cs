@@ -87,6 +87,9 @@ namespace Renard.Sample
                 if (!await CheckLicenseAsync(token))
                     throw new Exception("license error.");
 
+                // ライセンス読込み確認のデバッグログ
+                Debug.Log($"license: uuid={licenseHandler.Uuid}, contentsId={licenseHandler.ContentsId}, expiryDate={licenseHandler.ExpiryDate}");
+
                 // スプラッシュ表示が完了しているか確認する
                 await UniTask.WaitWhile(() => !SplashScreen.isFinished, cancellationToken: token);
                 token.ThrowIfCancellationRequested();

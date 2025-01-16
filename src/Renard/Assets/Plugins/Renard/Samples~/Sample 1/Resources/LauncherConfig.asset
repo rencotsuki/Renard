@@ -18,30 +18,30 @@ MonoBehaviour:
   windows:
     TargetFrameRate: 60
     SkipLicense: 0
-    LicenseLocalPath: 
+    LicenseLocalPath: License
     FirstSceneName: Sample
     additiveScenes: []
   osx:
     TargetFrameRate: 60
     SkipLicense: 0
-    LicenseLocalPath: 
+    LicenseLocalPath: License
     FirstSceneName: Sample
     additiveScenes: []
   ios:
     TargetFrameRate: 60
     SkipLicense: 0
-    LicenseLocalPath: 
+    LicenseLocalPath: License
     FirstSceneName: Sample
     additiveScenes: []
   android:
     TargetFrameRate: 60
     SkipLicense: 0
-    LicenseLocalPath: 
+    LicenseLocalPath: License
     FirstSceneName: Sample
     additiveScenes: []
   other:
     TargetFrameRate: 60
     SkipLicense: 0
-    LicenseLocalPath: 
+    LicenseLocalPath: License
     FirstSceneName: Sample
     additiveScenes: []
