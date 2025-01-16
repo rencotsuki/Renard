@@ -22,8 +22,6 @@ namespace Renard
 
         private void Awake()
         {
-            isDebugLog = false;
-
             if (materialExternalDisplay != null)
             {
                 material = new Material(materialExternalDisplay);

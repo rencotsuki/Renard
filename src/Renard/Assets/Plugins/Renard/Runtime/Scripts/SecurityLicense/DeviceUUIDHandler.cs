@@ -12,8 +12,6 @@ namespace Renard
 
         private void Awake()
         {
-            isDebugLog = false;
-
             /*
              * iOSではdeviceUniqueIdentifierが
              * Unityバージョン、OSバージョンで

@@ -22,9 +22,8 @@ namespace Renard.AssetBundleUniTask
 
     public abstract class AssetBundleLoadOperation : IEnumerator
     {
-        protected bool isDebugLog => AssetBundleConfig.IsDebugLog;
-
         protected AssetBundleManager manager => AssetBundleManager.Singleton;
+        protected bool isDebugLog => manager != null ? manager.IsDebugLog : false;
         protected bool isSetup => manager != null ? manager.IsSetup : false;
         protected bool isInit => manager != null ? manager.IsInit : false;
 
@@ -74,7 +73,7 @@ namespace Renard.AssetBundleUniTask
 
         protected void Log(DebugerLogType logType, string methodName, string message)
         {
-            if (!AssetBundleConfig.IsDebugLog)
+            if (!isDebugLog)
             {
                 if (logType == DebugerLogType.Info)
                     return;

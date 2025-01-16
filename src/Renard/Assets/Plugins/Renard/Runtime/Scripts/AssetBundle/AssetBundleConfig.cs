@@ -7,9 +7,6 @@ namespace Renard.AssetBundleUniTask
 {
     public class AssetBundleConfig
     {
-        /// <summary>ログ出力(true=出力する)</summary>
-        public static bool IsDebugLog => false;
-
         /// <summary>ロードタイムアウト時間[s]</summary>
         public static float LoadingTimeOut => 30f;
 

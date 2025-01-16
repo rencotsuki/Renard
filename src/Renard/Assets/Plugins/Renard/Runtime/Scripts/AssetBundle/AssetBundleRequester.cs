@@ -24,13 +24,15 @@ namespace Renard.AssetBundleUniTask
         public string ErrorMessage { get; private set; } = string.Empty;
         public AssetBundle AssetBundle { get; private set; } = null;
 
+        protected bool isDebugLog = false;
+
         private uint _crc = 0;
         private AssetBundleCreateRequest _request = null;
         private CancellationTokenSource _cancellationTokenSource = null;
 
         protected void Log(DebugerLogType logType, string methodName, string message)
         {
-            if (!AssetBundleConfig.IsDebugLog)
+            if (!isDebugLog)
             {
                 if (logType == DebugerLogType.Info)
                     return;
@@ -39,9 +41,11 @@ namespace Renard.AssetBundleUniTask
             DebugLogger.Log(this.GetType(), logType, methodName, message);
         }
 
-        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, bool encrypt, params string[] dependencies)
+        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, bool encrypt, bool isDebugLog, params string[] dependencies)
         {
             var load = new AssetBundleRequester();
+            load.isDebugLog = isDebugLog;
+
             if (load.CreateTack(assetName, path, crc, encrypt, dependencies))
             {
                 return load;

@@ -144,8 +144,6 @@ namespace Renard
             base.Initialized();
             DontDestroyOnLoad(this);
 
-            isDebugLog = AssetBundleConfig.IsDebugLog;
-
             IsSetup = false;
             IsServer = false;
 
@@ -767,13 +765,11 @@ namespace Renard
                 else
                 {
                     var dependencies = Manifest.GetAllDependencies(assetBundleName);
-                    var load = AssetBundleRequester.CreateRequest(assetBundleName, bundlePath, info.AssetCRC, IsEncrypt, dependencies);
+                    var load = AssetBundleRequester.CreateRequest(assetBundleName, bundlePath, info.AssetCRC, IsEncrypt, IsDebugLog, dependencies);
                     if (load != null)
                     {
                         loadingStreamingAssets.Add(assetBundleName, load);
-
-                        if (AssetBundleConfig.IsDebugLog)
-                            Log(DebugerLogType.Info, "LoadAssetBundleInternal", $"AssetBundleUniTaskCreateRequest({assetBundleName})  loadPath= {load.Path}");
+                        Log(DebugerLogType.Info, "LoadAssetBundleInternal", $"AssetBundleUniTaskCreateRequest({assetBundleName})  loadPath= {load.Path}");
                     }
                     else
                     {

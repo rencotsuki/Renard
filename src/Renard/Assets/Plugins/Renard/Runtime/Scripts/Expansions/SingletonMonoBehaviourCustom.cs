@@ -45,7 +45,7 @@ public abstract class SingletonMonoBehaviourCustom<T> : MonoBehaviourCustom wher
             return;
         }
 
-        if (isDebugLog)
+        if (IsDebugLog)
             DebugLogger.Log(typeof(T), DebugerLogType.Info, "Awake", $"{typeof(T)} is create: InstanceId={this.GetInstanceID()}");
 
         Initialized();
@@ -55,7 +55,7 @@ public abstract class SingletonMonoBehaviourCustom<T> : MonoBehaviourCustom wher
     {
         if (singleton != null && singleton.GetInstanceID() == this.GetInstanceID())
         {
-            if (isDebugLog)
+            if (IsDebugLog)
                 DebugLogger.Log(typeof(T), DebugerLogType.Info, "OnDestroy", $"{typeof(T)} is destroy: InstanceId={this.GetInstanceID()}");
 
             singleton = null;

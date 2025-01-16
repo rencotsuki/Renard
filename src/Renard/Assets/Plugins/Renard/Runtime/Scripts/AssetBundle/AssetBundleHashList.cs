@@ -64,15 +64,7 @@ namespace Renard.AssetBundleUniTask
         public int Count { get { return Assets != null ? Assets.Count : 0; } }
 
         protected void Log(DebugerLogType logType, string methodName, string message)
-        {
-            if (!AssetBundleConfig.IsDebugLog)
-            {
-                if (logType == DebugerLogType.Info)
-                    return;
-            }
-
-            DebugLogger.Log(this.GetType(), logType, methodName, message);
-        }
+            => DebugLogger.Log(this.GetType(), logType, methodName, message);
 
         public string Serialize()
         {

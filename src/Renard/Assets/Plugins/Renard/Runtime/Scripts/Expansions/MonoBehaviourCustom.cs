@@ -1,7 +1,4 @@
-﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS0436
-
-using System;
+﻿using System;
 using UnityEngine;
 using Renard.Debuger;
 
@@ -9,11 +6,11 @@ using Renard.Debuger;
 [Serializable]
 public class MonoBehaviourCustom : MonoBehaviour
 {
-    protected bool isDebugLog = false;
+    public bool IsDebugLog = false;
 
     protected void Log(DebugerLogType logType, string methodName, string message)
     {
-        if (!isDebugLog)
+        if (!IsDebugLog)
         {
             if (logType == DebugerLogType.Info)
                 return;
