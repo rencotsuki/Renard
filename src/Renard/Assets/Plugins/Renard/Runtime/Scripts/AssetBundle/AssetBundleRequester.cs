@@ -11,9 +11,12 @@ namespace Renard.AssetBundleUniTask
     [Serializable]
     public class AssetBundleRequester
     {
+        private static bool IsDebugLog => AssetBundleManager.IsDebugLogMaster;
+        private static int LoadingTimeOutMilliseconds => AssetBundleManager.LoadingTimeOutMilliseconds;
+        private static int LoadRetryCount => AssetBundleManager.LoadRetryCount;
+
         public string AssetName { get; private set; } = string.Empty;
         public string Path { get; private set; } = string.Empty;
-        public bool IsEncrypt { get; private set; } = false;
         public string[] Dependencies { get; private set; } = null;
         public string StrDependencies { get; private set; } = string.Empty;
         public float EndTimeout { get; private set; } = 0f;
@@ -24,15 +27,15 @@ namespace Renard.AssetBundleUniTask
         public string ErrorMessage { get; private set; } = string.Empty;
         public AssetBundle AssetBundle { get; private set; } = null;
 
-        protected bool isDebugLog = false;
-
+        private bool _isEncrypt = false;
+        private string _encryptKey = string.Empty;
         private uint _crc = 0;
         private AssetBundleCreateRequest _request = null;
         private CancellationTokenSource _cancellationTokenSource = null;
 
         protected void Log(DebugerLogType logType, string methodName, string message)
         {
-            if (!isDebugLog)
+            if (!IsDebugLog)
             {
                 if (logType == DebugerLogType.Info)
                     return;
@@ -41,12 +44,10 @@ namespace Renard.AssetBundleUniTask
             DebugLogger.Log(this.GetType(), logType, methodName, message);
         }
 
-        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, bool encrypt, bool isDebugLog, params string[] dependencies)
+        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, bool encrypt, string encryptKey, params string[] dependencies)
         {
             var load = new AssetBundleRequester();
-            load.isDebugLog = isDebugLog;
-
-            if (load.CreateTack(assetName, path, crc, encrypt, dependencies))
+            if (load.CreateTack(assetName, path, crc, encrypt, encryptKey, dependencies))
             {
                 return load;
             }
@@ -61,13 +62,12 @@ namespace Renard.AssetBundleUniTask
             Dispose();
         }
 
-        private bool CreateTack(string assetName, string path, uint crc, bool encrypt, string[] dependencies)
+        private bool CreateTack(string assetName, string path, uint crc, bool encrypt, string encryptKey, string[] dependencies)
         {
             if (string.IsNullOrEmpty(assetName) || string.IsNullOrEmpty(path)) return false;
 
             AssetName = assetName;
             Path = path;
-            IsEncrypt = encrypt;
             Dependencies = dependencies;
 #if DEBUG
             foreach (var asset in Dependencies)
@@ -77,6 +77,8 @@ namespace Renard.AssetBundleUniTask
             }
 #endif
             _crc = crc;
+            _isEncrypt = encrypt;
+            _encryptKey = encryptKey;
 
             Initialize();
             return true;
@@ -90,7 +92,7 @@ namespace Renard.AssetBundleUniTask
 
         public bool Retry()
         {
-            if (RetryCount >= AssetBundleConfig.LoadRetryCount)
+            if (RetryCount >= LoadRetryCount)
                 return false;
 
             RetryCount++;
@@ -104,19 +106,18 @@ namespace Renard.AssetBundleUniTask
             IsDone = false;
             IsFileError = false;
             ErrorMessage = string.Empty;
-
-            EndTimeout = Time.time + AssetBundleConfig.LoadingTimeOut;
+            EndTimeout = Time.time + ((float)LoadingTimeOutMilliseconds * 0.001f);
 
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();
-            OnLoadFromStreamAsync(_cancellationTokenSource.Token, AssetName, Path, _crc).Forget();
+            OnLoadFromStreamAsync(_cancellationTokenSource.Token, AssetName, Path).Forget();
         }
 
-        private async UniTask OnLoadFromStreamAsync(CancellationToken cancellationToken, string assetName, string path, uint crc)
+        private async UniTask OnLoadFromStreamAsync(CancellationToken cancellationToken, string assetName, string path)
         {
             try
             {
-                Log(DebugerLogType.Info, "OnLoadFromStreamAsync", $"assetName={assetName}, crc={crc}, path={path}");
+                Log(DebugerLogType.Info, "OnLoadFromStreamAsync", $"assetName={assetName}, crc={_crc}, encrypt={_isEncrypt}, path={path}");
 
                 using (var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
@@ -126,18 +127,18 @@ namespace Renard.AssetBundleUniTask
                         throw new Exception("File length zero.");
                     }
 
-                    if (IsEncrypt)
+                    if (_isEncrypt)
                     {
                         var uniqueSalt = System.Text.Encoding.UTF8.GetBytes(assetName);
-                        var uncryptor = new SeekableAesStream(fs, AssetBundleBuildConfig.Encrypt_KEY, uniqueSalt);
-                        _request = AssetBundle.LoadFromStreamAsync(uncryptor, crc);
+                        var uncryptor = new SeekableAesStream(fs, _encryptKey, uniqueSalt);
+                        _request = AssetBundle.LoadFromStreamAsync(uncryptor, _crc);
                         await _request.ToUniTask(Cysharp.Threading.Tasks.Progress.Create<float>(x => Progress = x), PlayerLoopTiming.FixedUpdate, cancellationToken);
 
                         AssetBundle = _request.assetBundle;
                     }
                     else
                     {
-                        var loadAssetBundle = AssetBundle.LoadFromStreamAsync(fs, crc);
+                        var loadAssetBundle = AssetBundle.LoadFromStreamAsync(fs, _crc);
                         await loadAssetBundle.ToUniTask(Cysharp.Threading.Tasks.Progress.Create<float>(x => Progress = x), PlayerLoopTiming.FixedUpdate, cancellationToken);
 
                         AssetBundle = loadAssetBundle.assetBundle;

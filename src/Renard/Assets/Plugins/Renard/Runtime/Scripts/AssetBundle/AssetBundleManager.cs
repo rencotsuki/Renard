@@ -6,6 +6,9 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UniRx;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Renard
 {
@@ -14,33 +17,37 @@ namespace Renard
 
     public class AssetBundleManager : SingletonMonoBehaviourCustom<AssetBundleManager>
     {
+        public const int LoadingTimeOutMilliseconds = 30 * 1000;
+        public const int LoadRetryCount = 5;
+
+        public const string ManifestFileExtension = "manifest";
+        public const string HashFileExtension = "json";
+        public const string LocalPath = "AssetBundles";
+        public const string HashFileName = "AssetBundleHash";
+        public const string DefaultOutputPath = "AssetBundles";
+
+        public static bool IsDebugLogMaster => singleton != null ? singleton.IsDebugLog : false;
+
         public bool IsSetup { get; private set; } = false;
         public bool IsInit { get; private set; } = false;
         public bool IsDiffData { get; private set; } = false;
 
         public bool IsServer { get; private set; } = false;
-        public bool IsSimulateMode { get; private set; } = false;
-        public bool IsEncrypt { get; private set; } = false;
+        public bool IsSimulateMode
+        {
+            get
+            {
+//#if UNITY_EDITOR
+//                if (AssetBundleEditor.IsSimulateMode)
+//                    return true;
+//#endif
+                return false;
+            }
+        }
 
         private const int readTimeoutMillisecond = 5 * 1000;
 
         private const int deleteWaitTimeoutMillisecond = 500;
-
-        public string ManifestName
-        {
-            get
-            {
-#if UNITY_EDITOR
-                return AssetBundleBuildConfig.GetPlatformManifestName(UnityEditor.EditorUserBuildSettings.activeBuildTarget);
-#else
-                return AssetBundleBuildConfig.GetPlatformManifestName(Application.platform);
-#endif
-            }
-        }
-        protected string manifestFileExtension => AssetBundleConfig.ManifestFileExtension;
-        protected string hashFileName => AssetBundleConfig.HashFileName;
-        protected string hashFileExtension => AssetBundleConfig.HashFileExtension;
-        protected string folderName => AssetBundleConfig.FolderName;
 
         protected RuntimePlatform activePlatform
         {
@@ -48,12 +55,46 @@ namespace Renard
             {
 
 #if UNITY_EDITOR
-                return AssetBundleBuildConfig.ToRuntimePlatform(UnityEditor.EditorUserBuildSettings.activeBuildTarget);
+                return ToRuntimePlatform(EditorUserBuildSettings.activeBuildTarget);
 #else
                 return Application.platform;
 #endif
             }
         }
+
+        public string ManifestName
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return GetPlatformManifestName(EditorUserBuildSettings.activeBuildTarget);
+#else
+                return GetPlatformManifestName(activePlatform);
+#endif
+            }
+        }
+
+        private AssetBundleConfigAsset _assetBundleConfig = null;
+        protected AssetBundleConfigAsset assetBundleConfig
+        {
+            get
+            {
+                try
+                {
+                    if (_assetBundleConfig == null)
+                        _assetBundleConfig = AssetBundleConfigAsset.Load();
+                }
+                catch (Exception ex)
+                {
+                    Log(DebugerLogType.Info, "assetBundleConfig", $"{ex.Message}");
+                    _assetBundleConfig = null;
+                }
+                return _assetBundleConfig;
+            }
+        }
+        protected bool isEncrypt => assetBundleConfig != null ? assetBundleConfig.IsEncrypt : false;
+        protected string encryptIV => assetBundleConfig != null ? assetBundleConfig.EncryptIV : string.Empty;
+        protected string encryptKey => assetBundleConfig != null ? assetBundleConfig.EncryptKey : string.Empty;
 
         public string DirectoryPath { get; private set; } = string.Empty;
         public string AssetDirectoryPath
@@ -61,9 +102,9 @@ namespace Renard
             get
             {
 #if UNITY_EDITOR
-                return $"{DirectoryPath}/{folderName}/{AssetBundleConfig.GetPlatformDirectoryName(AssetBundleBuildConfig.ToRuntimePlatform(UnityEditor.EditorUserBuildSettings.activeBuildTarget))}";
+                return $"{DirectoryPath}/{LocalPath}/{GetPlatformDirectoryName(activePlatform)}";
 #else
-                return $"{DirectoryPath}/{folderName}/{AssetBundleConfig.GetPlatformDirectoryName(Application.platform)}";
+                return $"{DirectoryPath}/{LocalPath}/{GetPlatformDirectoryName(activePlatform)}";
 #endif
             }
         }
@@ -157,8 +198,93 @@ namespace Renard
             base.OnDestroy();
         }
 
+        #region Path
+
+        /// <summary>プラットフォーム対応フォルダ名</summary>
+        public static string GetPlatformDirectoryName(RuntimePlatform platform)
+        {
+            switch (platform)
+            {
+                case RuntimePlatform.IPhonePlayer:
+                    return "iOS";
+
+                case RuntimePlatform.Android:
+                    return "Android";
+
+                case RuntimePlatform.OSXEditor:
+                case RuntimePlatform.OSXPlayer:
+                    return "OSX";
+
+                case RuntimePlatform.WindowsEditor:
+                case RuntimePlatform.WindowsPlayer:
+                    return "Windows";
+
+#if !UNITY_5_4_OR_NEWER
+                        case RuntimePlatform.OSXWebPlayer:
+                        case RuntimePlatform.WindowsWebPlayer:
+                            return "WebPlayer";
+#endif
+                case RuntimePlatform.WebGLPlayer:
+                    return "WebGL";
+
+                default:
+                    break;
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>Manifestファイル名(プラットフォーム別)</summary>
+        public static string GetPlatformManifestName(RuntimePlatform platform)
+            => $"{GetPlatformDirectoryName(platform)}";
+
+#if UNITY_EDITOR
+
+        public static RuntimePlatform ToRuntimePlatform(BuildTarget buildPlatform)
+        {
+            switch (buildPlatform)
+            {
+                case BuildTarget.iOS:
+                    return RuntimePlatform.IPhonePlayer;
+
+                case BuildTarget.Android:
+                    return RuntimePlatform.Android;
+
+                case BuildTarget.StandaloneOSX:
+                    return RuntimePlatform.OSXPlayer;
+
+#if !UNITY_5_4_OR_NEWER
+                    case BuildTarget.WebPlayer:
+                        return Application.platform;
+#endif
+
+                case BuildTarget.WebGL:
+                    return RuntimePlatform.WebGLPlayer;
+
+                case BuildTarget.StandaloneWindows:
+                case BuildTarget.StandaloneWindows64:
+                default:
+                    break;
+            }
+
+            return RuntimePlatform.WindowsPlayer;
+        }
+
+        /// <summary>プラットフォーム対応フォルダ名</summary>
+        public static string GetPlatformDirectoryName(BuildTarget buildPlatform)
+            => GetPlatformDirectoryName(ToRuntimePlatform(buildPlatform));
+
+        /// <summary>出力先ディレクトリ(プラットフォーム別)</summary>
+        public static string GetPlatformManifestName(BuildTarget buildPlatform)
+            => GetPlatformManifestName(ToRuntimePlatform(buildPlatform));
+#endif
+
+        #endregion
+
         protected string OnGetAssetDirectoryPath(RuntimePlatform platform)
-            => $"{DirectoryPath}/{folderName}/{AssetBundleConfig.GetPlatformDirectoryName(platform)}";
+        {
+            return $"{DirectoryPath}/{LocalPath}/{GetPlatformDirectoryName(platform)}";
+        }
 
         private async UniTask<(byte[], DateTime)> OnReadFileAsync(CancellationToken token, string filePath)
         {
@@ -253,15 +379,13 @@ namespace Renard
         }
 
         /// <summary></summary>
-        public async UniTask<bool> SetupAsync(CancellationToken token, bool isServer, bool isEncrypt, string directoryPath)
+        public async UniTask<bool> SetupAsync(CancellationToken token, bool isServer, string directoryPath)
         {
             IsServer = isServer;
-            IsSimulateMode = AssetBundleBuildConfig.IsSimulateMode;
-            IsEncrypt = isEncrypt;
 
             DirectoryPath = string.IsNullOrEmpty(directoryPath) ? Application.persistentDataPath : directoryPath;
 
-            Log(DebugerLogType.Info, "SetupAsync", $"isServer={IsServer}, isSimulateMode={IsSimulateMode}, isEncrypt={IsEncrypt}\n\rdirectoryPath={DirectoryPath}");
+            Log(DebugerLogType.Info, "SetupAsync", $"isServer={IsServer}, isSimulateMode={IsSimulateMode}, isEncrypt={isEncrypt}\n\rdirectoryPath={DirectoryPath}");
 
             OnResetSetup();
 
@@ -295,10 +419,10 @@ namespace Renard
 
             try
             {
-                originHashList_Win = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.WindowsPlayer)}/{hashFileName}.{hashFileExtension}");
-                originHashList_OSX = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.OSXPlayer)}/{hashFileName}.{hashFileExtension}");
-                originHashList_iOS = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.IPhonePlayer)}/{hashFileName}.{hashFileExtension}");
-                originHashList_And = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.Android)}/{hashFileName}.{hashFileExtension}");
+                originHashList_Win = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.WindowsPlayer)}/{HashFileName}.{HashFileExtension}");
+                originHashList_OSX = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.OSXPlayer)}/{HashFileName}.{HashFileExtension}");
+                originHashList_iOS = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.IPhonePlayer)}/{HashFileName}.{HashFileExtension}");
+                originHashList_And = await OnReadFileAsync(token, $"{OnGetAssetDirectoryPath(RuntimePlatform.Android)}/{HashFileName}.{HashFileExtension}");
             }
             catch (Exception ex)
             {
@@ -602,7 +726,7 @@ namespace Renard
         {
             if (IsSimulateMode) return true;
 
-            var path = $"{AssetDirectoryPath}/{ManifestName}.{manifestFileExtension}";
+            var path = $"{AssetDirectoryPath}/{ManifestName}.{ManifestFileExtension}";
 
             try
             {
@@ -620,7 +744,7 @@ namespace Renard
                     throw new Exception("manifest operation error.");
 
                 var operationTimeoutToken = new CancellationTokenSource();
-                operationTimeoutToken.CancelAfterSlim(TimeSpan.FromSeconds(AssetBundleConfig.LoadingTimeOut));
+                operationTimeoutToken.CancelAfterSlim(TimeSpan.FromMilliseconds(LoadingTimeOutMilliseconds));
                 var operationLinkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, operationTimeoutToken.Token);
 
                 await operation.ToUniTask(cancellationToken: operationTimeoutToken.Token);
@@ -730,10 +854,10 @@ namespace Renard
                     {
                         Log(DebugerLogType.Info, "LoadAssetBundleInternal", $"Manifest({assetBundleName}) data.Length= {fs.Length} bundlePath= {bundlePath}");
 
-                        if (IsEncrypt)
+                        if (isEncrypt)
                         {
                             var uniqueSalt = System.Text.Encoding.UTF8.GetBytes(assetBundleName);
-                            var uncryptor = new SeekableAesStream(fs, AssetBundleBuildConfig.Encrypt_KEY, uniqueSalt);
+                            var uncryptor = new SeekableAesStream(fs, encryptKey, uniqueSalt);
                             var load = AssetBundle.LoadFromStream(uncryptor, info.AssetCRC);
                             if (load != null)
                             {
@@ -765,7 +889,7 @@ namespace Renard
                 else
                 {
                     var dependencies = Manifest.GetAllDependencies(assetBundleName);
-                    var load = AssetBundleRequester.CreateRequest(assetBundleName, bundlePath, info.AssetCRC, IsEncrypt, IsDebugLog, dependencies);
+                    var load = AssetBundleRequester.CreateRequest(assetBundleName, bundlePath, info.AssetCRC, isEncrypt, encryptKey, dependencies);
                     if (load != null)
                     {
                         loadingStreamingAssets.Add(assetBundleName, load);
@@ -969,8 +1093,8 @@ namespace Renard
 
                     if (!string.IsNullOrEmpty(asset.Value.ManifestName))
                     {
-                        result = await OnReadFileAsync(token, $"{AssetDirectoryPath}/{asset.Value.ManifestName}.{manifestFileExtension}");
-                        originAssetDataDic.Add($"{asset.Value.ManifestName}.{manifestFileExtension}", result);
+                        result = await OnReadFileAsync(token, $"{AssetDirectoryPath}/{asset.Value.ManifestName}.{ManifestFileExtension}");
+                        originAssetDataDic.Add($"{asset.Value.ManifestName}.{ManifestFileExtension}", result);
                     }
                 }
             }
@@ -1056,8 +1180,8 @@ namespace Renard
                 OnResetSetup();
                 OnUnloadAssetBundles();
 
-                if (!await OnDeleteDirectoryAsync(token, $"{DirectoryPath}/{folderName}"))
-                    throw new Exception($"delete failed. path={DirectoryPath}/{folderName}");
+                if (!await OnDeleteDirectoryAsync(token, $"{DirectoryPath}/{LocalPath}"))
+                    throw new Exception($"delete failed. path={DirectoryPath}/{LocalPath}");
 
                 return string.Empty;
             }

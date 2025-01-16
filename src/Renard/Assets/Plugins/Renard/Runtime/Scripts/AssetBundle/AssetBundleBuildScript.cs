@@ -1,7 +1,9 @@
 ﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CS0436
 
+using System;
 using System.IO;
+using System.Text;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -16,27 +18,45 @@ namespace Renard
     {
 #if UNITY_EDITOR
 
-        public static void BuildAssetBundles(string outputDirectory, bool isEncrypt, bool isViewStatusBar = false)
-            => BuildAssetBundles(EditorUserBuildSettings.activeBuildTarget, outputDirectory, isEncrypt, isViewStatusBar);
+        private static bool isDebugLog => AssetBundleManager.IsDebugLogMaster;
+        private static string hashFileName => AssetBundleManager.HashFileName;
+        private static string hashFileExtension => AssetBundleManager.HashFileExtension;
 
-        public static void BuildAssetBundles(BuildTarget buildTarget, string outputDirectory, bool isEncrypt, bool isViewStatusBar = false)
+        private static string GetPlatformDirectoryName(BuildTarget buildTarget)
+            => AssetBundleManager.GetPlatformDirectoryName(buildTarget);
+
+        private static string GetPlatformManifestName(BuildTarget buildTarget)
+            => AssetBundleManager.GetPlatformManifestName(buildTarget);
+
+        private static void Log(DebugerLogType logType, string methodName, string message)
         {
-            var outputPath = $"{outputDirectory}/{AssetBundleBuildConfig.FolderName}/{AssetBundleBuildConfig.GetPlatformDirectoryName(buildTarget)}";
+            if (!isDebugLog)
+            {
+                if (logType == DebugerLogType.Info)
+                    return;
+            }
+
+            DebugLogger.Log(typeof(AssetBundleBuildScript), logType, methodName, message);
+        }
+
+        public static void BuildAssetBundles(string outputDirectory, bool isEncrypt, string encryptKey = "", bool isViewStatusBar = false)
+            => BuildAssetBundles(EditorUserBuildSettings.activeBuildTarget, outputDirectory, isEncrypt, encryptKey, isViewStatusBar);
+
+        public static void BuildAssetBundles(BuildTarget buildTarget, string outputDirectory, bool isEncrypt, string encryptKey, bool isViewStatusBar = false)
+        {
+            var outputPath = $"{outputDirectory}/{GetPlatformDirectoryName(buildTarget)}";
             if (!Directory.Exists(outputPath))
                 Directory.CreateDirectory(outputPath);
-
-            Debug.Log($"BuildAssetBundles:[{buildTarget}] {outputPath}");
 
             var manifest = BuildPipeline.BuildAssetBundles(outputPath, BuildAssetBundleOptions.None, buildTarget);
 
             CreateAssetBundleHashList(outputPath, buildTarget, manifest, isViewStatusBar);
 
             if (isEncrypt)
-                AssetBundleEncryptionAndCreateHashList(outputPath, buildTarget, manifest, isEncrypt, isViewStatusBar);
+                AssetBundleEncryptionAndCreateHashList(outputPath, buildTarget, manifest, encryptKey, isViewStatusBar);
 
-            if (isViewStatusBar) EditorUtility.ClearProgressBar();
-
-            Debug.Log($"BuildAssetBundles:[{buildTarget}] <color=yellow>Completed !</color>");
+            if (isViewStatusBar)
+                EditorUtility.ClearProgressBar();
         }
 
         private static AssetBundleHashList OnLoadAssetBundleHashList(string path, string fileName)
@@ -44,21 +64,20 @@ namespace Renard
             try
             {
                 var result = new AssetBundleHashList();
-                if (File.Exists($"{path}/{fileName}.{AssetBundleConfig.HashFileExtension}"))
+                if (File.Exists($"{path}/{fileName}.{AssetBundleManager.HashFileExtension}"))
                 {
                     // TODO: UTF8のBomに注意！！
-                    var data = File.ReadAllText($"{path}/{fileName}.{AssetBundleConfig.HashFileExtension}", new System.Text.UTF8Encoding(false));
+                    var data = File.ReadAllText($"{path}/{fileName}.{AssetBundleManager.HashFileExtension}", new UTF8Encoding(false));
 
                     if (data != null && data.Length > 0)
                         result.Deserialize(data);
                 }
 
-                Debug.Log($"OnLoadAssetBundleHashList: <color=yellow>Success</color>.\r\npath={path}/{fileName}.{AssetBundleConfig.HashFileExtension}");
                 return result;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                Debug.LogWarning($"OnLoadAssetBundleHashList: <color=red>Failed</color>. {ex.Message}");
+                Log(DebugerLogType.Info, "OnLoadAssetBundleHashList", $"<color=red>Failed</color>. {ex.Message}");
                 return null;
             }
         }
@@ -68,18 +87,18 @@ namespace Renard
             try
             {
                 if (data == null)
-                    throw new System.Exception($"AssetBundleHashList null. path={outputPath}/{fileName}");
+                    throw new Exception($"AssetBundleHashList null. path={outputPath}/{fileName}");
 
                 if (!Directory.Exists(outputPath))
                     Directory.CreateDirectory(outputPath);
 
                 // TODO: UTF8のBomに注意！！
-                File.WriteAllText($"{outputPath}/{fileName}", data.Serialize(), new System.Text.UTF8Encoding(false));
+                File.WriteAllText($"{outputPath}/{fileName}", data.Serialize(), new UTF8Encoding(false));
                 return true;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                Debug.LogWarning($"OnSaveAssetBundleHashList: <color=red>Failed</color>. {ex.Message}");
+                Log(DebugerLogType.Info, "OnSaveAssetBundleHashList", $"<color=red>Failed</color>. {ex.Message}");
                 return false;
             }
         }
@@ -88,14 +107,14 @@ namespace Renard
         {
             if (manifest == null)
             {
-                Debug.LogWarning("CreateAssetBundleHashList: No assetBundle output manifest.");
+                Log(DebugerLogType.Info, "CreateAssetBundleHashList", "No assetBundle output manifest.");
                 return;
             }
 
-            var assetBundleHashList = OnLoadAssetBundleHashList(basePath, AssetBundleConfig.HashFileName);
+            var assetBundleHashList = OnLoadAssetBundleHashList(basePath, hashFileExtension);
             var assetBundles = manifest.GetAllAssetBundles();
 
-            var manifestName = AssetBundleBuildConfig.GetPlatformManifestName(buildTarget);
+            var manifestName = GetPlatformManifestName(buildTarget);
             if (isViewStatusBar) EditorUtility.DisplayProgressBar("AssetBundleEncryption", $"{manifestName}", 0);
 
             // AssetBundle Manifest
@@ -103,14 +122,14 @@ namespace Renard
                 var dataSize = File.ReadAllBytes(Path.Combine(basePath, manifestName)).Length;
                 if (dataSize <= 0)
                 {
-                    Debug.LogWarning($"CreateAssetBundleHashList: <color=red>Failed</color>. {manifestName}");
+                    Log(DebugerLogType.Info, "CreateAssetBundleHashList", $"<color=red>Failed</color>. {manifestName}");
                     return;
                 }
 
                 var manifestDataSize = File.ReadAllBytes(Path.Combine(basePath, $"{manifestName}.manifest")).Length; 
                 if (manifestDataSize <= 0)
                 {
-                    Debug.LogWarning($"CreateAssetBundleHashList: <color=red>Failed</color>. {manifestName}.manifest");
+                    Log(DebugerLogType.Info, "CreateAssetBundleHashList", $"<color=red>Failed</color>. {manifestName}.manifest");
                 }
 
                 uint crc = 0;
@@ -132,13 +151,13 @@ namespace Renard
                 var dataSize = File.ReadAllBytes(Path.Combine(basePath, assetBundles[i])).Length;
                 if (dataSize <= 0)
                 {
-                    Debug.LogWarning($"CreateAssetBundleHashList: <color=red>Failed</color>. {assetBundles[i]}");
+                    Log(DebugerLogType.Info, "CreateAssetBundleHashList", $"<color=red>Failed</color>. {assetBundles[i]}");
                 }
 
                 var manifestDataSize = File.ReadAllBytes(Path.Combine(basePath, $"{assetBundles[i]}.manifest")).Length;
                 if (manifestDataSize <= 0)
                 {
-                    Debug.LogWarning($"CreateAssetBundleHashList: <color=red>Failed</color>. {assetBundles[i]}.manifest");
+                    Log(DebugerLogType.Info, "CreateAssetBundleHashList", $"<color=red>Failed</color>. {assetBundles[i]}.manifest");
                 }
 
                 uint crc = 0;
@@ -148,19 +167,17 @@ namespace Renard
                 assetBundleHashList.Assets.Add(assetBundles[i], data);
             }
 
-            assetBundleHashList.CreateTime = System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-            OnSaveAssetBundleHashList(assetBundleHashList, basePath, $"{AssetBundleConfig.HashFileName}.{AssetBundleConfig.HashFileExtension}");
+            assetBundleHashList.CreateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            OnSaveAssetBundleHashList(assetBundleHashList, basePath, $"{hashFileName}.{hashFileExtension}");
 
             AssetDatabase.Refresh();
-
-            Debug.Log($"CreateAssetBundleHashList:[{buildTarget}]\n{assetBundleHashList.ToString()}");
         }
 
-        private static void AssetBundleEncryptionAndCreateHashList(string basePath, BuildTarget buildTarget, AssetBundleManifest manifest, bool isEncrypt, bool isViewStatusBar)
+        private static void AssetBundleEncryptionAndCreateHashList(string basePath, BuildTarget buildTarget, AssetBundleManifest manifest, string encryptKey, bool isViewStatusBar)
         {
-            if (manifest == null)
+            if (manifest == null || string.IsNullOrEmpty(encryptKey))
             {
-                Debug.LogWarning("AssetBundleEncryptionAndCreateHashList: No assetBundle output manifest.");
+                Log(DebugerLogType.Info, "AssetBundleEncryptionAndCreateHashList", "No assetBundle output manifest.");
                 return;
             }
 
@@ -170,25 +187,25 @@ namespace Renard
 
             Directory.CreateDirectory(outputPath);
 
-            var assetBundleHashList = OnLoadAssetBundleHashList(outputPath, AssetBundleConfig.HashFileName);
+            var assetBundleHashList = OnLoadAssetBundleHashList(outputPath, hashFileName);
             var assetBundles = manifest.GetAllAssetBundles();
 
-            var manifestName = AssetBundleBuildConfig.GetPlatformManifestName(buildTarget);
+            var manifestName = GetPlatformManifestName(buildTarget);
             if (isViewStatusBar) EditorUtility.DisplayProgressBar("AssetBundleEncryption", $"{manifestName}", 0);
 
             // AssetBundle Manifest
             {
-                var dataSize = EncryptionAssetBundle(manifestName, Path.Combine(basePath, manifestName), Path.Combine(outputPath, manifestName));
+                var dataSize = EncryptionAssetBundle(manifestName, Path.Combine(basePath, manifestName), Path.Combine(outputPath, manifestName), encryptKey);
                 if (dataSize <= 0)
                 {
-                    Debug.LogWarning($"AssetBundleEncryptionAndCreateHashList: EncryptionAssetBundle <color=red>Failed</color>. {manifestName}");
+                    Log(DebugerLogType.Info, "AssetBundleEncryptionAndCreateHashList", $"EncryptionAssetBundle <color=red>Failed</color>. {manifestName}");
                     return;
                 }
 
-                var manifestDataSize = EncryptionAssetBundle(manifestName, Path.Combine(basePath, $"{manifestName}.manifest"), Path.Combine(outputPath, $"{manifestName}.manifest"));
+                var manifestDataSize = EncryptionAssetBundle(manifestName, Path.Combine(basePath, $"{manifestName}.manifest"), Path.Combine(outputPath, $"{manifestName}.manifest"), encryptKey);
                 if (manifestDataSize <= 0)
                 {
-                    Debug.LogWarning($"AssetBundleEncryptionAndCreateHashList: EncryptionAssetBundle <color=red>Failed</color>. {manifestName}.manifest");
+                    Log(DebugerLogType.Info, "AssetBundleEncryptionAndCreateHashList", $"EncryptionAssetBundle <color=red>Failed</color>. {manifestName}");
                 }
 
                 uint crc = 0;
@@ -207,16 +224,16 @@ namespace Renard
 
                 var hash = manifest.GetAssetBundleHash(assetBundles[i]);
 
-                var dataSize = EncryptionAssetBundle(assetBundles[i], Path.Combine(basePath, assetBundles[i]), Path.Combine(outputPath, assetBundles[i]));
+                var dataSize = EncryptionAssetBundle(assetBundles[i], Path.Combine(basePath, assetBundles[i]), Path.Combine(outputPath, assetBundles[i]), encryptKey);
                 if (dataSize <= 0)
                 {
-                    Debug.LogWarning($"AssetBundleEncryptionAndCreateHashList: EncryptionAssetBundle <color=red>Failed</color>. {assetBundles[i]}");
+                    Log(DebugerLogType.Info, "AssetBundleEncryptionAndCreateHashList", $"EncryptionAssetBundle <color=red>Failed</color>. {assetBundles[i]}");
                 }
 
-                var manifestDataSize = EncryptionAssetBundle($"{assetBundles[i]}.manifest", Path.Combine(basePath, $"{assetBundles[i]}.manifest"), Path.Combine(outputPath, $"{assetBundles[i]}.manifest"));
+                var manifestDataSize = EncryptionAssetBundle($"{assetBundles[i]}.manifest", Path.Combine(basePath, $"{assetBundles[i]}.manifest"), Path.Combine(outputPath, $"{assetBundles[i]}.manifest"), encryptKey);
                 if (manifestDataSize <= 0)
                 {
-                    Debug.LogWarning($"AssetBundleEncryptionAndCreateHashList: EncryptionAssetBundle <color=red>Failed</color>. {assetBundles[i]}.manifest");
+                    Log(DebugerLogType.Info, "AssetBundleEncryptionAndCreateHashList", $"EncryptionAssetBundle <color=red>Failed</color>. {assetBundles[i]}.manifest");
                 }
 
                 uint crc = 0;
@@ -226,37 +243,40 @@ namespace Renard
                 assetBundleHashList.Assets.Add(assetBundles[i], data);
             }
 
-            assetBundleHashList.CreateTime = System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-            OnSaveAssetBundleHashList(assetBundleHashList, outputPath, $"{AssetBundleConfig.HashFileName}.{AssetBundleConfig.HashFileExtension}");
+            assetBundleHashList.CreateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            OnSaveAssetBundleHashList(assetBundleHashList, outputPath, $"{hashFileName}.{hashFileExtension}");
 
             AssetDatabase.Refresh();
-
-            Debug.Log($"AssetBundleEncryptionAndCreateHashList:[{buildTarget}]\n{assetBundleHashList.ToString()}");
         }
 
-        private static int EncryptionAssetBundle(string assetName, string basePath, string outputPath)
+        private static int EncryptionAssetBundle(string assetName, string basePath, string outputPath, string encryptKey)
         {
-            if (string.IsNullOrEmpty(assetName)) return 0;
-
-            if (File.Exists(basePath))
+            try
             {
+                if (string.IsNullOrEmpty(assetName))
+                    throw new Exception("null or empty assetName.");
+
+                if (!File.Exists(basePath))
+                    throw new Exception($"not found baseFile. path={basePath}");
+
                 var data = File.ReadAllBytes(basePath);
-                if (data.Length > 0)
+                if (data.Length <= 0)
+                    throw new Exception($"read file error. path={basePath}");
+
+                // 暗号化してファイルに書き込む
+                using (var baseStream = new FileStream(outputPath, FileMode.OpenOrCreate))
                 {
-                    // 暗号化してファイルに書き込む
-                    using (var baseStream = new FileStream(outputPath, FileMode.OpenOrCreate))
-                    {
-                        var uniqueSalt = System.Text.Encoding.UTF8.GetBytes(assetName);
-                        var cryptor = new SeekableAesStream(baseStream, AssetBundleBuildConfig.Encrypt_KEY, uniqueSalt);
-                        cryptor.Write(data, 0, data.Length);
-                        Debug.Log($"EncryptionFile:[<color=yellow>success</color>] {basePath} => {outputPath}");
-                        return data.Length;
-                    }
+                    var uniqueSalt = Encoding.UTF8.GetBytes(assetName);
+                    var cryptor = new SeekableAesStream(baseStream, encryptKey, uniqueSalt);
+                    cryptor.Write(data, 0, data.Length);
+                    return data.Length;
                 }
             }
-
-            Debug.Log($"EncryptionFile:[<color=red>failed</color>] {basePath} => {outputPath}");
-            return 0;
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "EncryptionAssetBundle", $"[<color=red>failed</color>] {ex.Message}");
+                return 0;
+            }
         }
 
 #endif

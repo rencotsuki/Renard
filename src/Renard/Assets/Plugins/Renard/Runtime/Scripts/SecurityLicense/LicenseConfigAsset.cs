@@ -35,7 +35,7 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Debug.Log($"LicenseConfigAsset::Load <color=red>error</color>. {ex.Message}");
+                Debug.Log($"{typeof(LicenseConfigAsset).Name}::Load <color=red>error</color>. {ex.Message}");
                 return null;
             }
         }

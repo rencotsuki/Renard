@@ -136,6 +136,7 @@ Assets/WSATestCertificate.pfx
 .vsconfig
 src/CreateLicenses/*
 src/License/*
+src/AssetBundles/*
 src/Renard/Library/*
 src/Renard/Temp/*
 src/Renard/Logs/*
