@@ -32,7 +32,7 @@ namespace Renard.Sample
             get
             {
 #if UNITY_EDITOR
-                if (!LicenseSimulation)
+                if (!SkipLicense)
                     return true;
 #endif
                 if (configData != null && configData.SkipLicense)
@@ -242,51 +242,51 @@ namespace Renard.Sample
             }
         }
 
-        private static int _isLicenseSimulation = -1;
-        private const string _licenseSimulation = "LicenseSimulation";
+        private static int _isSkipLicense = -1;
+        private const string _skiplicense = "SkipLicense";
 
-        protected static bool LicenseSimulation
+        protected static bool SkipLicense
         {
             get
             {
-                if (_isLicenseSimulation == -1)
-                    _isLicenseSimulation = UnityEditor.EditorPrefs.GetBool(_licenseSimulation, true) ? 1 : 0;
-                return _isLicenseSimulation != 0;
+                if (_isSkipLicense == -1)
+                    _isSkipLicense = UnityEditor.EditorPrefs.GetBool(_skiplicense, true) ? 1 : 0;
+                return _isSkipLicense != 0;
             }
             set
             {
                 int newValue = value ? 1 : 0;
-                if (newValue != _isLicenseSimulation)
+                if (newValue != _isSkipLicense)
                 {
-                    _isLicenseSimulation = newValue;
-                    UnityEditor.EditorPrefs.SetBool(_licenseSimulation, value);
+                    _isSkipLicense = newValue;
+                    UnityEditor.EditorPrefs.SetBool(_skiplicense, value);
                 }
             }
         }
 
         [UnityEditor.MenuItem("Renard/License/CreateMode", false, 3)]
-        public static void ToggleCreateLicenseModeSimulation()
+        public static void ToggleCreateLicenseMode()
         {
             CreateLicenseMode = !CreateLicenseMode;
         }
 
         [UnityEditor.MenuItem("Renard/License/CreateMode", true, 3)]
-        public static bool ToggleCreateLicenseModeSimulationValidate()
+        public static bool ToggleCreateLicenseModeValidate()
         {
             UnityEditor.Menu.SetChecked("Renard/License/CreateMode", CreateLicenseMode);
             return true;
         }
 
-        [UnityEditor.MenuItem("Renard/License/IsCheck", false, 3)]
-        public static void ToggleLicenseSimulation()
+        [UnityEditor.MenuItem("Renard/License/SkipLicense", false, 3)]
+        public static void ToggleSkipLicense()
         {
-            LicenseSimulation = !LicenseSimulation;
+            SkipLicense = !SkipLicense;
         }
 
-        [UnityEditor.MenuItem("Renard/License/IsCheck", true, 3)]
-        public static bool ToggleLicenseSimulationValidate()
+        [UnityEditor.MenuItem("Renard/License/SkipLicense", true, 3)]
+        public static bool ToggleSkipLicenseValidate()
         {
-            UnityEditor.Menu.SetChecked("Renard/License/IsCheck", LicenseSimulation);
+            UnityEditor.Menu.SetChecked("Renard/License/SkipLicense", SkipLicense);
             return true;
         }
 #endif
