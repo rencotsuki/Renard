@@ -89,6 +89,8 @@ namespace Renard.Sample
 
         private void CreateLicense()
         {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+
             editData.CreateDate = DateTime.UtcNow;
 
             if (handler != null && handler.Create(editData))
@@ -105,6 +107,15 @@ namespace Renard.Sample
                     .OnActionDone(null, "ＯＫ")
                     .Show();
             }
+
+#else
+
+            SystemConsoleHandler.SystemWindow
+                .SetMessage("ライセンス生成", $"現在のプラットフォームでは処理できません\n\rWindowまたはMacにて処理をお願いします")
+                .OnActionDone(null, "ＯＫ")
+                .Show();
+
+#endif
         }
 
         private void SetDefaultContentsId()

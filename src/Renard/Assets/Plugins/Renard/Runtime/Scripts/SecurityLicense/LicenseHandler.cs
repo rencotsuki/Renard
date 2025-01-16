@@ -91,12 +91,6 @@ namespace Renard
             }
         }
 
-#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-
-        /*
-         * 配布側のアプリでは動作させない
-         */
-
         /// <summary>ライセンスファイル生成</summary>
         public bool Create(LicenseData data)
         {
@@ -161,8 +155,6 @@ namespace Renard
             }
             return false;
         }
-
-#endif
 
         /// <summary>ライセンス確認</summary>
         public LicenseStatusEnum Activation(string uuid, string localPath = DefaultLocalPath)
@@ -260,8 +252,6 @@ namespace Renard
     {
         public override void OnInspectorGUI()
         {
-#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-
             var handler = target as LicenseHandler;
 
             if (GUILayout.Button("CreateWindow"))
@@ -270,8 +260,6 @@ namespace Renard
             }
 
             EditorGUILayout.Space();
-
-#endif
 
             DrawDefaultInspector();
         }
@@ -341,8 +329,6 @@ namespace Renard
 
                 if (m_handler != null && m_createData.ValidityDays > 0)
                 {
-#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-
                     if (GUILayout.Button("Create", new GUILayoutOption[] { GUILayout.ExpandWidth(true) }))
                     {
                         GUILayout.Space(EditorGUIUtility.singleLineHeight);
@@ -356,8 +342,6 @@ namespace Renard
                             GUILayout.Label($"<color=red>Failed</color>.");
                         }
                     }
-
-#endif
                 }
             }
         }
