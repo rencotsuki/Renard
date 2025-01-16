@@ -1,21 +1,28 @@
 ﻿using System;
+using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+#endif
 
 namespace Renard
 {
-    public static class ApplicationVersionUtil
+    [Serializable]
+    public class ApplicationVersionAsset : ScriptableObject
     {
         public const string Path = "Assets/Resources";
         public const string FileName = "ApplicationVersion";
         public const string FileExtension = "asset";
-    }
 
-    [Serializable]
-    public class ApplicationVersionAsset : ScriptableObject
-    {
+        [Header("※必ずResources下に置いてください")]
+
+        [Header("バージョン")]
         [SerializeField] private string _version = "0.0.0";
         public string Version => _version;
 
+        [Header("ビルド")]
         [SerializeField] private int _buildNumber = 0;
         public int BuildNumber => _buildNumber;
 
@@ -23,7 +30,7 @@ namespace Renard
         {
             try
             {
-                return Resources.Load<ApplicationVersionAsset>(ApplicationVersionUtil.FileName);
+                return Resources.Load<ApplicationVersionAsset>(FileName);
             }
             catch (Exception ex)
             {
@@ -37,28 +44,51 @@ namespace Renard
             _version = version;
             _buildNumber = buildNumber;
         }
+    }
 
-        public void Save()
-        {
 #if UNITY_EDITOR
-            var fullPath = $"{ApplicationVersionUtil.Path}/{ApplicationVersionUtil.FileName}.{ApplicationVersionUtil.FileExtension}";
+
+    public class ApplicationVersionEditor : IPreprocessBuildWithReport
+    {
+        public int callbackOrder { get { return 0; } }
+
+        public void OnPreprocessBuild(BuildReport report)
+        {
+            // モバイル端末ではPlayerSetting側をそのまま利用するので作らない
+            if (report.summary.platform == BuildTarget.iOS ||
+                report.summary.platform == BuildTarget.Android)
+                return;
+
+            CreateApplicationVersionAsset();
+        }
+
+        [MenuItem("Assets/Create/Renard/ApplicationVersion")]
+        private static void CreateApplicationVersionAsset()
+        {
+            var fullPath = $"{ApplicationVersionAsset.Path}/{ApplicationVersionAsset.FileName}.{ApplicationVersionAsset.FileExtension}";
 
             try
             {
-                if (!System.IO.Directory.Exists(ApplicationVersionUtil.Path))
-                    System.IO.Directory.CreateDirectory(ApplicationVersionUtil.Path);
+                if (!Directory.Exists(ApplicationVersionAsset.Path))
+                    Directory.CreateDirectory(ApplicationVersionAsset.Path);
 
-                UnityEditor.EditorUtility.SetDirty(this);
-                UnityEditor.AssetDatabase.CreateAsset(this, fullPath);
+                var asset = new ApplicationVersionAsset();
 
-                UnityEditor.AssetDatabase.SaveAssets();
-                UnityEditor.AssetDatabase.Refresh();
+                // Winでは「PlayerSettings.macOS」を使う
+                asset?.Set(Application.version, int.Parse(PlayerSettings.macOS.buildNumber));
+
+                EditorUtility.SetDirty(asset);
+                AssetDatabase.CreateAsset(asset, fullPath);
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
             catch (Exception ex)
             {
-                Debug.Log($"{this.GetType().Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
+                Debug.Log($"{typeof(ApplicationVersionEditor)}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
             }
-#endif
         }
     }
+
+#endif
 }

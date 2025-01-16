@@ -11,19 +11,21 @@ namespace Renard.License
         public const string FileName = "LicenseConfig";
         public const string FileExtension = "asset";
 
-        [Header("※16桁のキー(ハイフンも含む)")]
+        [Header("※必ずResources下に置いてください")]
+
+        [Header("16桁のキー(ハイフンも含む)")]
         [SerializeField] private string _encryptKey = "AAAAA-BBBBB-1234";
         public string EncryptKey => _encryptKey;
 
-        [Header("※アプリ内での識別情報(空でも可)")]
+        [Header("アプリ内での識別情報(空でも可)")]
         [SerializeField] private string _contentsId = "Renard-001A";
         public string ContentsId => _contentsId;
 
-        [Header("※基本は{プロダクト名}KeyContainer")]
+        [Header("基本は{プロダクト名}KeyContainer")]
         [SerializeField] private string _keyContainer = "RenardKeyContainer";
         public string KeyContainer => _keyContainer;
 
-        [Header("※プロダクトごとに決める")]
+        [Header("プロダクトごとに決める")]
         [SerializeField] private string _licensePassKey = "12345";
         public string LicensePassKey => _licensePassKey;
 

@@ -25,9 +25,16 @@ namespace Renard.Sample
         public const string DefaultFirstSceneName = "Sample";
         public static string[] DefaultAdditiveScenes => new string[0];
 
+        [Header("※必ずResources下に置いてください")]
+
+        [Header("ライセンス年度")]
         [SerializeField] private string copyrightFirstYear = "2025";
+        [Header("アプリケーション連携時の動作最低バージョン")]
         [SerializeField] private string minAppVersion = string.Empty;
+        [Header("アプリケーション連携時の動作最低ビルド")]
         [SerializeField] private int minBuildNumber = 0;
+
+        [Header("各プラットフォーム設定")]
         [SerializeField] private LauncherConfigData windows = new LauncherConfigData();
         [SerializeField] private LauncherConfigData osx = new LauncherConfigData();
         [SerializeField] private LauncherConfigData ios = new LauncherConfigData();

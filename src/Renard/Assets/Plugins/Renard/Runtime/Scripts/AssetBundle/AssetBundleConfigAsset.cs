@@ -1,11 +1,13 @@
 ﻿using System;
+using System.IO;
 using UnityEngine;
 
 namespace Renard.AssetBundleUniTask
 {
-    [CreateAssetMenu(menuName = "Renard/AssetBundleConfig", fileName = FileName)]
+    [Serializable]
     public class AssetBundleConfigAsset : ScriptableObject
     {
+        public const string Path = "Assets/Resources";
         public const string FileName = "AssetBundleConfig";
         public const string FileExtension = "asset";
 
@@ -37,4 +39,34 @@ namespace Renard.AssetBundleUniTask
             }
         }
     }
+
+#if UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX)
+
+    public static class AssetBundleConfigEditor
+    {
+        [UnityEditor.MenuItem("Assets/Create/Renard/AssetBundleConfig")]
+        private static void CreateAssetBundleConfigAsset()
+        {
+            var result = new AssetBundleConfigAsset();
+            var fullPath = $"{AssetBundleConfigAsset.Path}/{AssetBundleConfigAsset.FileName}.{AssetBundleConfigAsset.FileExtension}";
+
+            try
+            {
+                if (!Directory.Exists(AssetBundleConfigAsset.Path))
+                    Directory.CreateDirectory(AssetBundleConfigAsset.Path);
+
+                UnityEditor.EditorUtility.SetDirty(result);
+                UnityEditor.AssetDatabase.CreateAsset(result, fullPath);
+
+                UnityEditor.AssetDatabase.SaveAssets();
+                UnityEditor.AssetDatabase.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(AssetBundleConfigEditor).Name}::Save <color=red>error</color>. {ex.Message}\r\npath={fullPath}");
+            }
+        }
+    }
+
+#endif
 }
