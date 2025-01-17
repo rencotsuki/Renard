@@ -75,6 +75,53 @@ namespace Renard
 
         #region SystemWindow
 
+        [Serializable]
+        private struct SystemWindowContext
+        {
+            public string Title;
+            public string Message;
+            public Color FrameColor;
+            public Color BorderColor;
+            public Color TextColor;
+            public Action CloseAction;
+            public bool FrameOutButton;
+
+            public bool DoneButton;
+            public Action DoneAction;
+            public string DoneLabel;
+            public Color DoneLabelColor;
+            public bool DonActionClose;
+
+            public bool CancelButton;
+            public Action CancelAction;
+            public string CancelLabel;
+            public Color CancelLabelColor;
+
+            public void Clear()
+            {
+                Title = string.Empty;
+                Message = string.Empty;
+                FrameColor = SystemConsoleHandler.DefaultColorFrame;
+                BorderColor = SystemConsoleHandler.DefaultColorBorder;
+                TextColor = SystemConsoleHandler.DefaultColorText;
+                CloseAction = null;
+                FrameOutButton = false;
+
+                DoneButton = false;
+                DoneAction = null;
+                DoneLabel = SystemConsoleHandler.DefaultLabelDone;
+                DoneLabelColor = SystemConsoleHandler.DefaultColorLabel;
+                DonActionClose = false;
+
+                CancelButton = false;
+                CancelAction = null;
+                CancelLabel = SystemConsoleHandler.DefaultLabelCancel;
+                CancelLabelColor = SystemConsoleHandler.DefaultColorLabel;
+            }
+        }
+
+        private SystemWindowContext systemWindowContext = new SystemWindowContext();
+
         [HideInInspector] private bool _isOpenSystemWindow = false;
 
         /// <summary></summary>
@@ -100,6 +147,8 @@ namespace Renard
 
         private void SetupSystemWindow()
         {
+            systemWindowContext.Clear();
+
             if (systemWindowFrameOutButton != null)
                 systemWindowFrameOutButton.onClick.AddListener(OnClickSystemWindowCancel);
 
@@ -129,25 +178,43 @@ namespace Renard
             Close();
         }
 
-        private void ClearWindowOption()
+        private bool SetSystemWindowContext()
         {
-            _doneClose = false;
+            systemWindowTitle.text = systemWindowContext.Title;
+            systemWindowMessage.text = systemWindowContext.Message;
 
+            systemWindowFrame.color = systemWindowContext.FrameColor;
+            systemWindowBorder.color = systemWindowContext.BorderColor;
+            systemWindowTitle.color = systemWindowContext.TextColor;
+            systemWindowMessage.color = systemWindowContext.TextColor;
+
+            _systemWindowDoneAction = systemWindowContext.DoneAction;
+            _systemWindowCancelAction = systemWindowContext.CancelAction;
+            _systemWindowCloseAction = systemWindowContext.CloseAction;
+
+            _doneClose = systemWindowContext.DonActionClose;
+
+            systemWindowFrameOutButton.interactable = systemWindowContext.FrameOutButton;
+
+            systemWindowDoneButton.gameObject.SetActive(systemWindowContext.DoneButton);
+            systemWindowDoneLabel.text = systemWindowContext.DoneLabel;
+            systemWindowDoneLabel.color = systemWindowContext.DoneLabelColor;
+
+            systemWindowCancelButton.gameObject.SetActive(systemWindowContext.CancelButton);
+            systemWindowCancelLabel.text = systemWindowContext.CancelLabel;
+            systemWindowCancelLabel.color = systemWindowContext.CancelLabelColor;
+
+            // ボタンが１つでも有効になっているか確認する
+            return (systemWindowFrameOutButton.interactable ||
+                    systemWindowDoneButton.gameObject.activeSelf ||
+                    systemWindowCancelButton.gameObject.activeSelf);
+        }
+
+        private void ClearActions()
+        {
             _systemWindowDoneAction = null;
-
-            if (systemWindowDoneButton != null)
-                systemWindowDoneButton.gameObject.SetActive(false);
-
             _systemWindowCancelAction = null;
-
-            if (systemWindowCancelButton != null)
-                systemWindowCancelButton.gameObject.SetActive(false);
-
             _systemWindowCloseAction = null;
-
-            SetWindowColor(SystemConsoleHandler.DefaultColorFrame,
-                           SystemConsoleHandler.DefaultColorBorder,
-                           SystemConsoleHandler.DefaultColorText);
         }
 
         /// <summary>ウィンドウを閉じる</summary>
@@ -156,28 +223,32 @@ namespace Renard
             if (_systemWindowCloseAction != null)
                 _systemWindowCloseAction();
 
+            ClearActions();
             IsOpenWindow = false;
-            ClearWindowOption();
         }
 
         /// <summary>ウィンドウを開く</summary>
         public void Show()
         {
+            if (!SetSystemWindowContext())
+            {
+                // 問題があったら開かない
+                IsOpenWindow = false;
+                return;
+            }
+
             IsOpenWindow = true;
+
+            // 開いたら情報をクリア
+            systemWindowContext.Clear();
         }
 
         /// <summary>メッセージ設定</summary>
         public SystemConsoleUI SetMessage(string title, string message, bool frameOutButton = false)
         {
-            if (systemWindowTitle != null)
-                systemWindowTitle.text = title;
-
-            if (systemWindowMessage != null)
-                systemWindowMessage.text = message;
-
-            if (systemWindowFrameOutButton != null)
-                systemWindowFrameOutButton.interactable = frameOutButton;
-
+            systemWindowContext.Title = title;
+            systemWindowContext.Message = message;
+            systemWindowContext.FrameOutButton = frameOutButton;
             return this;
         }
 
@@ -187,19 +258,11 @@ namespace Renard
         /// <summary>確定操作</summary>
         public SystemConsoleUI OnActionDone(Action onAction, string label, Color labelColor, bool actionClose)
         {
-            _systemWindowDoneAction = onAction;
-
-            if (systemWindowDoneButton != null && !systemWindowDoneButton.gameObject.activeSelf)
-                systemWindowDoneButton.gameObject.SetActive(true);
-
-            if (systemWindowDoneLabel != null)
-            {
-                systemWindowDoneLabel.text = label;
-                systemWindowDoneLabel.color = labelColor;
-            }
-
-            _doneClose = actionClose;
-
+            systemWindowContext.DoneButton = true;
+            systemWindowContext.DoneAction = onAction;
+            systemWindowContext.DoneLabel = label;
+            systemWindowContext.DoneLabelColor = labelColor;
+            systemWindowContext.DonActionClose = actionClose;
             return this;
         }
 
@@ -209,24 +272,17 @@ namespace Renard
         /// <summary>不確定操作</summary>
         public SystemConsoleUI OnActionCancel(Action onAction, string label, Color labelColor)
         {
-            _systemWindowCancelAction = onAction;
-
-            if (systemWindowCancelButton != null && systemWindowCancelButton.gameObject.activeSelf != !string.IsNullOrEmpty(label))
-                systemWindowCancelButton.gameObject.SetActive(!string.IsNullOrEmpty(label));
-
-            if (systemWindowCancelLabel != null)
-            {
-                systemWindowCancelLabel.text = label;
-                systemWindowCancelLabel.color = labelColor;
-            }
-
+            systemWindowContext.CancelButton = true;
+            systemWindowContext.CancelAction = onAction;
+            systemWindowContext.CancelLabel = label;
+            systemWindowContext.CancelLabelColor = labelColor;
             return this;
         }
 
         /// <summary>閉じる操作</summary>
         public SystemConsoleUI OnActionClose(Action onAction)
         {
-            _systemWindowCloseAction = onAction;
+            systemWindowContext.CloseAction = onAction;
             return this;
         }
 
@@ -239,18 +295,9 @@ namespace Renard
         /// <summary>色設定</summary>
         public SystemConsoleUI SetWindowColor(Color frame, Color border, Color textColor)
         {
-            if (systemWindowFrame != null)
-                systemWindowFrame.color = frame;
-
-            if (systemWindowBorder != null)
-                systemWindowBorder.color = border;
-
-            if (systemWindowTitle != null)
-                systemWindowTitle.color = textColor;
-
-            if (systemWindowMessage != null)
-                systemWindowMessage.color = textColor;
-
+            systemWindowContext.FrameColor = frame;
+            systemWindowContext.BorderColor = border;
+            systemWindowContext.TextColor = textColor;
             return this;
         }
 

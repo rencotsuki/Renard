@@ -151,7 +151,6 @@ namespace Renard.Sample
                         var title = "ライセンス認証";
                         var message = string.Empty;
                         var errorMessage = string.Empty;
-                        var closeWindow = false;
 
                         // ファイルがない場合
                         if (status == LicenseStatusEnum.NotFile)
@@ -159,23 +158,7 @@ namespace Renard.Sample
                             // ライセンス発行の指示画面を表示
                             errorMessage = "not found license.";
 
-                            message = $"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>";
-
-                            SystemConsoleHandler.SystemWindow
-                                .SetMessage(title, message, true)
-                                .OnActionDone(
-                                () =>
-                                {
-                                    GUIUtility.systemCopyBuffer = uuid;
-                                },
-                                "ｺｰﾄﾞｺﾋﾟｰ",
-                                false)
-                                .OnActionClose(
-                                () =>
-                                {
-                                    closeWindow = true;
-                                })
-                                .Show();
+                            CreateLicenseMessage($"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>");
                         }
                         else
                         {
@@ -195,12 +178,19 @@ namespace Renard.Sample
                             }
 
                             SystemConsoleHandler.SystemWindow
-                                .SetMessage(title, message, true)
-                                .OnActionClose(() => { closeWindow = true; })
+                                .SetMessage(title, message)
+                                .OnActionDone(() =>
+                                {
+                                    CreateLicenseMessage($"ライセンスの依頼時には\n\r発行コードをお伝えください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>");
+                                },
+                                "ライセンス依頼",
+                                false)
+                                .OnActionCancel(null, "アプリを閉じる")
                                 .Show();
                         }
 
-                        await UniTask.WaitWhile(() => !closeWindow, cancellationToken: token);
+                        // ウィンドウが開いている間待つ
+                        await UniTask.WaitWhile(() => SystemConsoleHandler.SystemWindow.IsOpenWindow, cancellationToken: token);
                         token.ThrowIfCancellationRequested();
 
                         throw new Exception(errorMessage);
@@ -215,6 +205,23 @@ namespace Renard.Sample
                 Log(DebugerLogType.Info, "CheckLicenseAsync", $"{ex.Message}");
                 return false;
             }
+        }
+
+        private void CreateLicenseMessage(string message)
+        {
+            var title = "ライセンス依頼";
+
+            SystemConsoleHandler.SystemWindow
+                .SetMessage(title, message)
+                .OnActionDone(
+                () =>
+                {
+                    GUIUtility.systemCopyBuffer = uuid;
+                },
+                "コードコピー",
+                false)
+                .OnActionCancel(null, "アプリを閉じる")
+                .Show();
         }
 
 #if UNITY_EDITOR
