@@ -177,7 +177,7 @@ namespace Renard.Sample
                                 })
                                 .Show();
                         }
-                        else if (status == LicenseStatusEnum.Expired)
+                        else
                         {
                             if (status == LicenseStatusEnum.Expired)
                             {
@@ -196,7 +196,8 @@ namespace Renard.Sample
 
                             SystemConsoleHandler.SystemWindow
                                 .SetMessage(title, message, true)
-                                .OnActionClose(() => { closeWindow = true; });
+                                .OnActionClose(() => { closeWindow = true; })
+                                .Show();
                         }
 
                         await UniTask.WaitWhile(() => !closeWindow, cancellationToken: token);
