@@ -72,15 +72,10 @@ namespace Renard
                 return _licenseConfig;
             }
         }
-        protected string m_EncryptKey
-        {
-            get
-            {
-                if (licenseConfig != null)
-                    return licenseConfig.EncryptKey;
-                return string.Empty;
-            }
-        }
+        protected int encryptKeyLength => LicenseConfigAsset.EncryptKeyLength;
+        protected string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
+        protected int encryptIVLength => LicenseConfigAsset.EncryptIVLength;
+        protected string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
         public string m_ContentsId
         {
             get
@@ -90,6 +85,11 @@ namespace Renard
                 return string.Empty;
             }
         }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern IntPtr UnityDecryptAES256(string cipherTextBase64, string key, string iv);
+#endif // UNITY_IOS && !UNITY_EDITOR
 
         /// <summary>ライセンスファイル生成</summary>
         public bool Create(LicenseData data)
@@ -118,8 +118,11 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(m_EncryptKey))
-                    throw new Exception("null or empty encryptKey.");
+                if (string.IsNullOrEmpty(m_EncryptKey) || m_EncryptKey.Length != encryptKeyLength)
+                    throw new Exception($"encryptKey error. length={(m_EncryptKey != null ? m_EncryptKey.Length : 0)}");
+
+                if (string.IsNullOrEmpty(m_EncryptIV) || m_EncryptIV.Length != encryptIVLength)
+                    throw new Exception($"encryptIV error. length={(m_EncryptIV != null ? m_EncryptIV.Length : 0)}");
 
                 if (string.IsNullOrEmpty(licenseCode))
                     throw new Exception("null or empty licenseCode.");
@@ -136,7 +139,9 @@ namespace Renard
                 using (Aes aesAlg = Aes.Create())
                 {
                     aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptKey);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptIV);
+                    aesAlg.Mode = CipherMode.CBC;
+                    aesAlg.Padding = PaddingMode.PKCS7;
 
                     ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
 
@@ -223,8 +228,11 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(m_EncryptKey))
-                    throw new Exception("null or empty encryptKey.");
+                if (string.IsNullOrEmpty(m_EncryptKey) || m_EncryptKey.Length != encryptKeyLength)
+                    throw new Exception($"encryptKey error. length={(m_EncryptKey != null ? m_EncryptKey.Length : 0)}");
+
+                if (string.IsNullOrEmpty(m_EncryptIV) || m_EncryptIV.Length != encryptIVLength)
+                    throw new Exception($"encryptIV error. length={(m_EncryptIV != null ? m_EncryptIV.Length : 0)}");
 
                 if (string.IsNullOrEmpty(filePath))
                     throw new Exception("null or empty filePath.");
@@ -232,10 +240,21 @@ namespace Renard
                 if (!File.Exists(filePath))
                     throw new Exception($"not found filePath. path={filePath}");
 
+#if UNITY_IOS && !UNITY_EDITOR
+                using (FileStream fs = new FileStream(filePath, FileMode.Open))
+                using (StreamReader sr = new StreamReader(fs))
+                {
+                    IntPtr resultPtr = UnityDecryptAES256(sr.ReadToEnd(), m_EncryptKey, m_EncryptIV);
+                    if (resultPtr == IntPtr.Zero) return null;
+                    return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(resultPtr);
+                }
+#else
                 using (Aes aesAlg = Aes.Create())
                 {
                     aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptKey);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptIV);
+                    aesAlg.Mode = CipherMode.CBC;
+                    aesAlg.Padding = PaddingMode.PKCS7;
 
                     ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
@@ -246,6 +265,8 @@ namespace Renard
                         return sr.ReadToEnd();
                     }
                 }
+#endif // UNITY_IOS && !UNITY_EDITOR
+
             }
             catch (Exception ex)
             {

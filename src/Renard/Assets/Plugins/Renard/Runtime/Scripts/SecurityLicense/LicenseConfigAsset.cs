@@ -10,12 +10,18 @@ namespace Renard.License
         public const string Path = "Assets/Resources";
         public const string FileName = "LicenseConfig";
         public const string FileExtension = "asset";
+        public const int EncryptKeyLength = 32;
+        public const int EncryptIVLength = 16;
 
         [Header("※必ずResources下に置いてください")]
 
-        [Header("16桁のキー(ハイフンも含む)")]
-        [SerializeField] private string _encryptKey = "AAAAA-BBBBB-1234";
+        [Header("32桁のキー(英数字:a-z,A-z,0-1)")]
+        [SerializeField] private string _encryptKey = "0123456789abcdef0123456789abcdef";
         public string EncryptKey => _encryptKey;
+
+        [Header("16桁のキー(英数字:a-z,A-z,0-1)")]
+        [SerializeField] private string _encryptIV = "abcdef0123456789";
+        public string EncryptIV => _encryptIV;
 
         [Header("アプリ内での識別情報(空でも可)")]
         [SerializeField] private string _contentsId = "Renard-001A";
