@@ -2,7 +2,7 @@ import Foundation
 import CommonCrypto
 
 @objc public class AESDecryptor: NSObject {
-    @objc public func decryptAES256(cipherTextBase64: String, key: String, iv: String) -> String? {
+    @objc public static func decryptAES256(cipherTextBase64: String, key: String, iv: String) -> String? {
         guard let cipherData = Data(base64Encoded: cipherTextBase64),
               let keyData = key.data(using: .utf8),
               let ivData = iv.data(using: .utf8) else {

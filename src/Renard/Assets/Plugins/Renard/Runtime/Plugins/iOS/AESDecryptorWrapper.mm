@@ -9,8 +9,7 @@ extern "C" {
             NSString *keyString = [NSString stringWithUTF8String:key];
             NSString *ivString = [NSString stringWithUTF8String:iv];
             
-            AESDecryptor *decryptor = [AESDecryptor new];
-            NSString *decryptedString = [decryptor decryptAES256:cipherTextBase64:keyString:ivString];
+            NSString *decryptedString = [AESDecryptor decryptAES256WithCipherTextBase64:cipherText key:keyString iv:ivString];
             
             if (decryptedString == nil) {
                 return NULL;
