@@ -8,14 +8,15 @@ extern "C" {
             NSString *cipherText = [NSString stringWithUTF8String:cipherTextBase64];
             NSString *keyString = [NSString stringWithUTF8String:key];
             NSString *ivString = [NSString stringWithUTF8String:iv];
-
-            NSString *decryptedString = [AESDecryptor decryptAES256:cipherTextBase64:keyString:ivString];
+            
+            AESDecryptor *decryptor = [AESDecryptor new];
+            NSString *decryptedString = [decryptor decryptAES256:cipherTextBase64:keyString:ivString];
             
             if (decryptedString == nil) {
                 return NULL;
             }
-
-            // C •¶š—ñ‚É•ÏŠ·‚µ‚Ä Unity ‚É“n‚·
+            
+            // Cæ–‡å­—åˆ—ã«å¤‰æ›ã—ã¦Unityã«æ¸¡ã™
             const char* utf8String = [decryptedString UTF8String];
             char* result = strdup(utf8String);
             return result;
