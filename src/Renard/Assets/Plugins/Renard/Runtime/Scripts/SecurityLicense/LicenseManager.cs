@@ -122,7 +122,7 @@ namespace Renard.License
                     rsa.ImportParameters(privateKey);
 
                     var dataBytes = Encoding.UTF8.GetBytes(licenseData);
-                    var signedBytes = rsa.SignData(dataBytes, new SHA256CryptoServiceProvider());
+                    var signedBytes = rsa.SignData(dataBytes, new SHA256Cng());
                     var signedData = ConvertToBase64String(signedBytes);
 
                     Log(DebugerLogType.Info, "SignData", $"success\n\r{licenseData}\n\r{signedData}");
@@ -242,7 +242,7 @@ namespace Renard.License
                 {
                     rsa.ImportParameters(publicKey);
                     var dataBytes = Encoding.UTF8.GetBytes(licenseData);
-                    var isValid = rsa.VerifyData(dataBytes, new SHA256CryptoServiceProvider(), signedBytes);
+                    var isValid = rsa.VerifyData(dataBytes, new SHA256Cng(), signedBytes);
 
                     if (!isValid)
                         throw new CryptographicException("signature verification failed");
