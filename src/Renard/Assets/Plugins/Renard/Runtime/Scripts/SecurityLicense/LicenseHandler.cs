@@ -244,7 +244,10 @@ namespace Renard
                 using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
                 using (StreamReader sr = new StreamReader(fs))
                 {
-                    IntPtr resultPtr = UnityDecryptAES256(sr.ReadToEnd(), Encoding.UTF8.GetBytes(m_EncryptKey), Encoding.UTF8.GetBytes(m_EncryptIV));
+                    var resultPtr = UnityDecryptAES256(sr.ReadToEnd(),
+                                        LicenseManager.ShiftJISToUTF8(m_EncryptKey),
+                                        LicenseManager.ShiftJISToUTF8(m_EncryptIV));
+
                     if (resultPtr == IntPtr.Zero) return null;
                     return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(resultPtr);
                 }

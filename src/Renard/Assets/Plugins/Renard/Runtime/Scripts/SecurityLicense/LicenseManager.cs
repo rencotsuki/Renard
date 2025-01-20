@@ -50,7 +50,7 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-        private static string ShiftJISToUTF8(string shiftjis)
+        public static string ShiftJISToUTF8(string shiftjis)
         {
             try
             {
