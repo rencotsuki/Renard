@@ -103,12 +103,12 @@ namespace Renard
                 }
 
                 // ライセンスコードを生成
-                var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data);
+                var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data, IsDebugLog);
                 return OnEncryptAndSaveToFile(licenseCode, OutputPath, FileFullName);
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "Encrypt", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "Encrypt", $"{ex.Message}");
             }
             return false;
         }
@@ -156,7 +156,7 @@ namespace Renard
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "OnEncryptAndSaveToFile", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "OnEncryptAndSaveToFile", $"{ex.Message}");
             }
             return false;
         }
@@ -196,7 +196,7 @@ namespace Renard
                     throw new Exception($"not found file. path={filePath}/{FileFullName}");
                 }
 
-                Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData);
+                Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData, IsDebugLog);
 
                 // ライセンスデータを確認する
                 if (Status == LicenseStatusEnum.Success)
@@ -218,7 +218,7 @@ namespace Renard
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "Activation", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "Activation", $"{ex.Message}");
             }
             return Status;
         }
@@ -270,7 +270,7 @@ namespace Renard
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "DecryptFromFile", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "DecryptFromFile", $"{ex.Message}");
             }
             return string.Empty;
         }
@@ -379,4 +379,4 @@ namespace Renard
     }
 
 #endif
-                }
+}

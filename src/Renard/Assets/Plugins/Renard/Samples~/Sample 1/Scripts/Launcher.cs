@@ -55,9 +55,6 @@ namespace Renard.Sample
 
         private void Awake()
         {
-            IsDebugLog = true;
-            licenseHandler.IsDebugLog = IsDebugLog;
-
             var config = LauncherConfigAsset.Load();
             configData = config?.GetConfig();
 

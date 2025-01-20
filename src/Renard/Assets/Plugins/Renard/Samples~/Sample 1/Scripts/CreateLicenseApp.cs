@@ -42,6 +42,11 @@ namespace Renard.Sample
 
         private void Start()
         {
+#if UNITY_EDITOR
+            // 動作確認用
+            handler.IsDebugLog = true;
+#endif
+
             buttonCreate.onClick.AddListener(CreateLicense);
             buttonDefaultContentsId.onClick.AddListener(SetDefaultContentsId);
 

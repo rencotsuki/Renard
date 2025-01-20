@@ -35,13 +35,13 @@ namespace Renard.License
 
     public static class LicenseManager
     {
-        public static bool IsDebugLog => false;
-
         private const int partsLength = 4;
+
+        private static bool _isDebugLog = false;
 
         private static void Log(DebugerLogType logType, string methodName, string message)
         {
-            if (!IsDebugLog)
+            if (!_isDebugLog)
             {
                 if (logType == DebugerLogType.Info)
                     return;
@@ -50,9 +50,30 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-        /// <summary>ライセンス生成</summary>
-        public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data)
+        private static string ShiftJISToUTF8(string shiftjis)
         {
+            try
+            {
+                if (string.IsNullOrEmpty(shiftjis))
+                    throw new Exception("null or empty.");
+
+                var shiftJisBytes = Encoding.GetEncoding("Shift-JIS").GetBytes(shiftjis);
+                var utf8Bytes = Encoding.Convert(Encoding.GetEncoding("Shift-JIS"), Encoding.UTF8, shiftJisBytes);
+
+                return Encoding.UTF8.GetString(utf8Bytes);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "ShiftJISToUTF8", $"{ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>ライセンス生成</summary>
+        public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data, bool isDebugLog = false)
+        {
+            _isDebugLog = isDebugLog;
+
             try
             {
                 if (string.IsNullOrEmpty(data.Uuid) || string.IsNullOrEmpty(data.ContentsId))
@@ -64,12 +85,12 @@ namespace Renard.License
                 if (string.IsNullOrEmpty(keyContainer) || string.IsNullOrEmpty(licensePassKey))
                     throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}, passKeyLength={(licensePassKey != null ? licensePassKey.Length : 0)}");
 
-                var licenseData = $"{data.Uuid}|{data.ContentsId}|{CreateLicensePassKey(licensePassKey, data.Uuid)}|{data.ExpiryDate:yyyy-MM-dd}";
-                return SignData(licenseData, CreatePrivateKey(keyContainer));
+                var licenseData = $"{data.Uuid}|{data.ContentsId}|{licensePassKey}|{data.ExpiryDate:yyyy-MM-dd}";
+                return SignData(ShiftJISToUTF8(licenseData), CreatePrivateKey(keyContainer));
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "GenerateLicense", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "GenerateLicense", $"{ex.Message}");
             }
             return string.Empty;
         }
@@ -88,7 +109,7 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "CreatePrivateKey", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "CreatePrivateKey", $"{ex.Message}");
             }
             return default;
         }
@@ -108,19 +129,23 @@ namespace Renard.License
                     var signedBytes = rsa.SignData(dataBytes, new SHA256CryptoServiceProvider());
                     var signedData = Convert.ToBase64String(signedBytes);
 
+                    Log(DebugerLogType.Info, "SignData", $"success\n\r{licenseData}\n\r{signedData}");
+
                     return $"{licenseData}.{signedData}";
                 }
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "SignData", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "SignData", $"{ex.Message}");
             }
             return string.Empty;
         }
 
         /// <summary>ライセンス読込み ※ここでは日付のみチェックする</summary>
-        public static LicenseStatusEnum ValidateLicense(LicenseConfigAsset configAsset, string licenseCode, out LicenseData date)
+        public static LicenseStatusEnum ValidateLicense(LicenseConfigAsset configAsset, string licenseCode, out LicenseData date, bool isDebugLog = false)
         {
+            _isDebugLog = isDebugLog;
+
             date = new LicenseData();
             var status = LicenseStatusEnum.None;
 
@@ -135,9 +160,11 @@ namespace Renard.License
                 var licenseData = VerifySignature(licenseCode, CreatePublicKey(keyContainer));
                 var dataParts = licenseData.Split('|');
 
+                Log(DebugerLogType.Info, "ValidateLicense", $"{licenseCode}\n\r{licenseData}\n\r{dataParts.Length}={partsLength}");
+
                 if (dataParts.Length == partsLength)
                 {
-                    if (dataParts[2] == CreateLicensePassKey(licensePassKey, dataParts[0]))
+                    if (dataParts[2] == licensePassKey)
                     {
                         if (DateTime.TryParse(dataParts[3], out date.CreateDate))
                         {
@@ -158,7 +185,7 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "ValidateLicense", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "ValidateLicense", $"{ex.Message}");
 
                 date.CreateDate = DateTime.MinValue;
                 status = LicenseStatusEnum.Injustice;
@@ -180,7 +207,7 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "GetCspParams", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "GetCspParams", $"{ex.Message}");
             }
             return null;
         }
@@ -199,17 +226,9 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "CreatePublicKey", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "CreatePublicKey", $"{ex.Message}");
             }
             return default;
-        }
-
-        private static string CreateLicensePassKey(string licensePassKey, string deviceId)
-        {
-            if (!string.IsNullOrEmpty(deviceId) && !string.IsNullOrEmpty(licensePassKey))
-                return deviceId + licensePassKey;
-
-            return string.Empty;
         }
 
         private static string VerifySignature(string signedData, RSAParameters publicKey)
@@ -237,7 +256,7 @@ namespace Renard.License
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Info, "VerifySignature", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "VerifySignature", $"{ex.Message}");
             }
             return string.Empty;
         }
