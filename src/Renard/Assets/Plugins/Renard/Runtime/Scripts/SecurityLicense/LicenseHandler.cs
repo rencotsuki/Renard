@@ -185,7 +185,7 @@ namespace Renard
                     Directory.CreateDirectory(filePath);
 
                     Status = LicenseStatusEnum.NotFile;
-                    throw new Exception($"not found file. path={filePath}/{FileFullName}");
+                    throw new Exception($"not found directory. path={filePath}");
                 }
 
                 // ライセンスコードを読込み
@@ -224,7 +224,7 @@ namespace Renard
         }
 
         // 復号化して読込み
-        protected string OnDecryptFromFile(string filePath)
+        protected string OnDecryptFromFile(string fileFullPath)
         {
             try
             {
@@ -234,17 +234,17 @@ namespace Renard
                 if (string.IsNullOrEmpty(m_EncryptIV) || m_EncryptIV.Length != encryptIVLength)
                     throw new Exception($"encryptIV error. length={(m_EncryptIV != null ? m_EncryptIV.Length : 0)}");
 
-                if (string.IsNullOrEmpty(filePath))
+                if (string.IsNullOrEmpty(fileFullPath))
                     throw new Exception("null or empty filePath.");
 
-                if (!File.Exists(filePath))
-                    throw new Exception($"not found filePath. path={filePath}");
+                if (!File.Exists(fileFullPath))
+                    throw new Exception($"not found filePath. path={fileFullPath}");
 
 #if UNITY_IOS && !UNITY_EDITOR
-                using (FileStream fs = new FileStream(filePath, FileMode.Open))
+                using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
                 using (StreamReader sr = new StreamReader(fs))
                 {
-                    IntPtr resultPtr = UnityDecryptAES256(sr.ReadToEnd(), m_EncryptKey, m_EncryptIV);
+                    IntPtr resultPtr = UnityDecryptAES256(sr.ReadToEnd(), Encoding.UTF8.GetBytes(m_EncryptKey), Encoding.UTF8.GetBytes(m_EncryptIV));
                     if (resultPtr == IntPtr.Zero) return null;
                     return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(resultPtr);
                 }
@@ -258,7 +258,7 @@ namespace Renard
 
                     ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
-                    using (FileStream fs = new FileStream(filePath, FileMode.Open))
+                    using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
                     using (CryptoStream cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
                     using (StreamReader sr = new StreamReader(cs))
                     {
