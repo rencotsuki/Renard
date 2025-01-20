@@ -50,21 +50,17 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-        public static string ShiftJISToUTF8(string shiftjis)
+        public static string ConvertToBase64String(byte[] data)
         {
             try
             {
-                if (string.IsNullOrEmpty(shiftjis))
+                if (data == null || data.Length <= 0)
                     throw new Exception("null or empty.");
-
-                var shiftJisBytes = Encoding.GetEncoding("Shift-JIS").GetBytes(shiftjis);
-                var utf8Bytes = Encoding.Convert(Encoding.GetEncoding("Shift-JIS"), Encoding.UTF8, shiftJisBytes);
-
-                return Encoding.UTF8.GetString(utf8Bytes);
+                return Convert.ToBase64String(data);
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Warning, "ShiftJISToUTF8", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "ConvertToBase64String", $"{ex.Message}");
                 return string.Empty;
             }
         }
@@ -86,7 +82,7 @@ namespace Renard.License
                     throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}, passKeyLength={(licensePassKey != null ? licensePassKey.Length : 0)}");
 
                 var licenseData = $"{data.Uuid}|{data.ContentsId}|{licensePassKey}|{data.ExpiryDate:yyyy-MM-dd}";
-                return SignData(ShiftJISToUTF8(licenseData), CreatePrivateKey(keyContainer));
+                return SignData(ConvertToBase64String(Encoding.UTF8.GetBytes(licenseData)), CreatePrivateKey(keyContainer));
             }
             catch (Exception ex)
             {
@@ -127,7 +123,7 @@ namespace Renard.License
 
                     var dataBytes = Encoding.UTF8.GetBytes(licenseData);
                     var signedBytes = rsa.SignData(dataBytes, new SHA256CryptoServiceProvider());
-                    var signedData = Convert.ToBase64String(signedBytes);
+                    var signedData = ConvertToBase64String(signedBytes);
 
                     Log(DebugerLogType.Info, "SignData", $"success\n\r{licenseData}\n\r{signedData}");
 
