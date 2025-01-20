@@ -86,10 +86,10 @@ namespace Renard
             }
         }
 
-#if UNITY_IOS && !UNITY_EDITOR
-        [System.Runtime.InteropServices.DllImport("__Internal")]
-        private static extern IntPtr UnityDecryptAES256(string cipherTextBase64, string key, string iv);
-#endif // UNITY_IOS && !UNITY_EDITOR
+//#if UNITY_IOS && !UNITY_EDITOR
+//        [System.Runtime.InteropServices.DllImport("__Internal")]
+//        private static extern IntPtr UnityDecryptAES256(string cipherTextBase64, string key, string iv);
+//#endif // UNITY_IOS && !UNITY_EDITOR
 
         /// <summary>ライセンスファイル生成</summary>
         public bool Create(LicenseData data)
@@ -240,18 +240,17 @@ namespace Renard
                 if (!File.Exists(fileFullPath))
                     throw new Exception($"not found filePath. path={fileFullPath}");
 
-#if UNITY_IOS && !UNITY_EDITOR
-                using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
-                using (StreamReader sr = new StreamReader(fs))
-                {
-                    var resultPtr = UnityDecryptAES256(sr.ReadToEnd(),
-                                        LicenseManager.ShiftJISToUTF8(m_EncryptKey),
-                                        LicenseManager.ShiftJISToUTF8(m_EncryptIV));
+//#if UNITY_IOS && !UNITY_EDITOR
+//                using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
+//                using (StreamReader sr = new StreamReader(fs))
+//                {
+//                    var resultPtr = UnityDecryptAES256(sr.ReadToEnd(), m_EncryptKey, m_EncryptIV);
+//                    if (resultPtr == IntPtr.Zero)
+//                        return null;
 
-                    if (resultPtr == IntPtr.Zero) return null;
-                    return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(resultPtr);
-                }
-#else
+//                    return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(resultPtr);
+//                }
+//#else
                 using (Aes aesAlg = Aes.Create())
                 {
                     aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
@@ -268,7 +267,7 @@ namespace Renard
                         return sr.ReadToEnd();
                     }
                 }
-#endif // UNITY_IOS && !UNITY_EDITOR
+//#endif // UNITY_IOS && !UNITY_EDITOR
 
             }
             catch (Exception ex)
