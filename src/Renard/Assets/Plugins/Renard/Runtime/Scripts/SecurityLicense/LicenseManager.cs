@@ -50,7 +50,7 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-        public static string ConvertToBase64String(byte[] data)
+        private static string ConvertToBase64String(byte[] data)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace Renard.License
                     throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}, passKeyLength={(licensePassKey != null ? licensePassKey.Length : 0)}");
 
                 var licenseData = $"{data.Uuid}|{data.ContentsId}|{licensePassKey}|{data.ExpiryDate:yyyy-MM-dd}";
-                return SignData(ConvertToBase64String(Encoding.UTF8.GetBytes(licenseData)), CreatePrivateKey(keyContainer));
+                return SignData(licenseData, CreatePrivateKey(keyContainer));
             }
             catch (Exception ex)
             {
