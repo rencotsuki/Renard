@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
-using System.Security.Cryptography;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -16,8 +14,6 @@ namespace Renard.License
         public const string Path = "Assets/Resources";
         public const string FileName = "LicenseConfig";
         public const string FileExtension = "asset";
-        public const int EncryptKeyLength = 32;
-        public const int EncryptIVLength = 16;
 
         [Header("※必ずResources下に置いてください")]
 
@@ -29,15 +25,11 @@ namespace Renard.License
         [SerializeField] private string _licensePassKey = "";
         public string LicensePassKey => _licensePassKey;
 
-        [Header("KeyContainer ※変更には注意")]
-        [SerializeField] private string _keyContainer = "RenardKeyContainer";
-        public string KeyContainer => _keyContainer;
-
-        [Header("Key-32文字(英数字:a-z,A-z,0-1) ※変更には注意")]
+        [Header("Key-32文字 ※変更には注意")]
         [SerializeField] private string _encryptKey = "";
         public string EncryptKey => _encryptKey;
 
-        [Header("IV-16文字(英数字:a-z,A-z,0-1) ※変更には注意")]
+        [Header("IV-16文字 ※変更には注意")]
         [SerializeField] private string _encryptIV = "";
         public string EncryptIV => _encryptIV;
 
@@ -54,63 +46,12 @@ namespace Renard.License
             }
         }
 
-        public void Setup(string productName)
+        public void Create()
         {
-            _contentsId = $"{productName}";
+            _contentsId = LicenseManager.GenerateContentsId();
             _licensePassKey = string.Empty;
-            _keyContainer = PaddingBase64Key($"{productName}KeyContainer");
 
             CreateEncrypt();
-        }
-
-        private string PaddingBase64Key(string keyContainer)
-        {
-            try
-            {
-                var splits = keyContainer.Split('.');
-                // 文字数が4の倍数になるように変換
-                for (int i = 0; i < (splits[1].Length % 4); i++)
-                {
-                    splits[1] += "=";
-                }
-                return Convert.ToBase64String(Encoding.UTF8.GetBytes(splits[1]));
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"{typeof(LicenseConfigAsset).Name}::PaddingBase64Key <color=red>error</color>. {ex.Message}");
-            }
-            return string.Empty;
-        }
-
-        private const string passChars = @"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-=";
-
-        private string GeneratePassKey(int length, int seed)
-        {
-            try
-            {
-                if (length <= 0)
-                    throw new Exception("length zero.");
-
-                var result = new StringBuilder(length);
-                var random = new System.Random(seed);
-                var index = -1;
-
-                for (int i = 0; i < length; i++)
-                {
-                    index = random.Next(0, passChars.Length);
-
-                    if (index < 0 || passChars.Length <= index)
-                        throw new Exception($"not index. length={passChars.Length}, index={index}");
-
-                    result.Append(passChars[index]);
-                }
-                return result.ToString();
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"{typeof(LicenseConfigAsset).Name}::GeneratePassKey <color=red>error</color>. {ex.Message}");
-            }
-            return string.Empty;
         }
 
         public void CreateEncrypt()
@@ -119,8 +60,8 @@ namespace Renard.License
             {
                 var random = new System.Random(DateTime.UtcNow.Millisecond);
 
-                _encryptKey = GeneratePassKey(EncryptKeyLength, random.Next(0, 1000));
-                _encryptIV = GeneratePassKey(EncryptIVLength, random.Next(0, 1000));
+                _encryptKey = LicenseManager.GeneratePassKey(LicenseManager.EncryptKeyLength, random.Next(1, 1000));
+                _encryptIV = LicenseManager.GeneratePassKey(LicenseManager.EncryptIVLength, random.Next(1, 1000));
             }
             catch (Exception ex)
             {
@@ -143,11 +84,15 @@ namespace Renard.License
 
             DrawDefaultInspector();
 
-            EditorGUILayout.Space();
+            EditorGUILayout.Space(50);
 
-            if (GUILayout.Button("Create EncryptKey/IV"))
+            if (GUILayout.Button("Create Keys"))
             {
-                handler.CreateEncrypt();
+                var message = "KeyContainer, EncryptKey, EncryptIV\n\r\n\r更新すると元に戻せません。\n\r更新しますか？";
+                if (EditorUtility.DisplayDialog("Create Keys", message, "OK", "Cancel"))
+                {
+                    handler.CreateEncrypt();
+                }
             }
         }
     }
@@ -156,7 +101,7 @@ namespace Renard.License
 
     public static class LicenseConfigEditor
     {
-        [UnityEditor.MenuItem("Assets/Create/Renard/LicenseConfig")]
+        [MenuItem("Assets/Create/Renard/LicenseConfig")]
         private static void CreateLicenseConfigAsset()
         {
             // １回ロードしてAssetが存在するか確認する
@@ -166,18 +111,18 @@ namespace Renard.License
             var result = new LicenseConfigAsset();
             var fullPath = $"{LicenseConfigAsset.Path}/{LicenseConfigAsset.FileName}.{LicenseConfigAsset.FileExtension}";
 
-            result?.Setup(Application.productName);
+            result?.Create();
 
             try
             {
                 if (!Directory.Exists(LicenseConfigAsset.Path))
                     Directory.CreateDirectory(LicenseConfigAsset.Path);
 
-                UnityEditor.EditorUtility.SetDirty(result);
-                UnityEditor.AssetDatabase.CreateAsset(result, fullPath);
+                EditorUtility.SetDirty(result);
+                AssetDatabase.CreateAsset(result, fullPath);
 
-                UnityEditor.AssetDatabase.SaveAssets();
-                UnityEditor.AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
             catch (Exception ex)
             {

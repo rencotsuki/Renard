@@ -1,6 +1,9 @@
 using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace Renard
 {
@@ -36,7 +39,10 @@ namespace Renard.License
 
     public static class LicenseManager
     {
-        private const int partsLength = 4;
+        public const int EncryptKeyLength = 32;
+        public const int EncryptIVLength = 16;
+
+        private const int partsLength = 5;
 
         private static bool _isDebugLog = false;
 
@@ -51,39 +57,180 @@ namespace Renard.License
             DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
         }
 
-        private static string ConvertToBase64String(byte[] data)
+        private const string base64Pattern = @"^[A-Za-z0-9+/=]*$";
+
+        private const string passChars = @"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ^+-/=*$";
+
+        /// <summary></summary>
+        public static bool IsValidBase64String(string input)
         {
             try
             {
-                if (data == null || data.Length <= 0)
-                    throw new Exception("null or empty.");
-                return Convert.ToBase64String(data);
+                return Regex.IsMatch(input, base64Pattern);
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Warning, "ConvertToBase64String", $"{ex.Message}");
-                return string.Empty;
+                Log(DebugerLogType.Warning, "IsValidBase64String", $"{ex.Message}");
             }
+            return false;
         }
 
+        /// <summary></summary>
+        public static string GenerateContentsId() => Application.productName;
+
+        /// <summary></summary>
+        public static string GeneratePassKey(int createLength, int seed)
+            => GeneratePassKey(createLength, seed, _isDebugLog);
+
+        /// <summary></summary>
+        public static string GeneratePassKey(int createLength, int seed, bool isDebugLog)
+        {
+            _isDebugLog = isDebugLog;
+
+            try
+            {
+                if (createLength <= 0 || passChars.Length <= 0)
+                    throw new Exception($"create parame error. createLength={createLength}, passLength={passChars.Length}");
+
+                var result = new StringBuilder(createLength);
+                var random = new System.Random(seed);
+                var index = -1;
+
+                for (int i = 0; i < createLength; i++)
+                {
+                    index = random.Next(0, passChars.Length);
+
+                    if (index < 0 || passChars.Length <= index)
+                        throw new Exception($"not index. passLength={passChars.Length}, index={index}");
+
+                    result.Append(passChars[index]);
+                }
+                return result.ToString();
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "GeneratePassKey", $"{ex.Message}");
+            }
+            return string.Empty;
+        }
+
+        /// <summary></summary>
+        public static string EncryptCode(string stringCode, string key, string iv)
+            => EncryptCode(stringCode, key, iv, _isDebugLog);
+
+        /// <summary>暗号化</summary>
+        public static string EncryptCode(string stringCode, string key, string iv, bool isDebugLog)
+        {
+            _isDebugLog = isDebugLog;
+
+            try
+            {
+                if (string.IsNullOrEmpty(key) || key.Length != EncryptKeyLength)
+                    throw new Exception($"encryptKey error. length={(key != null ? key.Length : 0)}");
+
+                if (string.IsNullOrEmpty(iv) || iv.Length != EncryptIVLength)
+                    throw new Exception($"encryptIV error. length={(iv != null ? iv.Length : 0)}");
+
+                if (string.IsNullOrEmpty(stringCode))
+                    throw new Exception("null or empty stringCode.");
+
+                using (Aes aesAlg = Aes.Create())
+                {
+                    aesAlg.Key = Encoding.UTF8.GetBytes(key);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(iv);
+                    aesAlg.Mode = CipherMode.CBC;
+                    aesAlg.Padding = PaddingMode.PKCS7;
+
+                    ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                    byte[] encrypted;
+                    using (MemoryStream mStream = new MemoryStream())
+                    {
+                        using (CryptoStream ctStream = new CryptoStream(mStream, encryptor, CryptoStreamMode.Write))
+                        {
+                            using (StreamWriter sw = new StreamWriter(ctStream))
+                            {
+                                sw.Write(stringCode);
+                            }
+                            encrypted = mStream.ToArray();
+                        }
+                    }
+
+                    return Convert.ToBase64String(encrypted);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "EncryptCode", $"{ex.Message}");
+            }
+            return string.Empty;
+        }
+
+        /// <summary></summary>
+        public static string DecryptCode(string stringCode, string key, string iv)
+            => EncryptCode(stringCode, key, iv, _isDebugLog);
+
+        /// <summary>復号化</summary>
+        public static string DecryptCode(string encryptCode, string key, string iv, bool isDebugLog)
+        {
+            _isDebugLog = isDebugLog;
+
+            try
+            {
+                if (string.IsNullOrEmpty(key) || key.Length != EncryptKeyLength)
+                    throw new Exception($"encryptKey error. length={(key != null ? key.Length : 0)}");
+
+                if (string.IsNullOrEmpty(iv) || iv.Length != EncryptIVLength)
+                    throw new Exception($"encryptIV error. length={(iv != null ? iv.Length : 0)}");
+
+                if (string.IsNullOrEmpty(encryptCode))
+                    throw new Exception("null or empty encryptCode.");
+
+                using (Aes aesAlg = Aes.Create())
+                {
+                    aesAlg.Key = Encoding.UTF8.GetBytes(key);
+                    aesAlg.IV = Encoding.UTF8.GetBytes(iv);
+                    aesAlg.Mode = CipherMode.CBC;
+                    aesAlg.Padding = PaddingMode.PKCS7;
+
+                    ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                    var plain = string.Empty;
+                    using (MemoryStream mStream = new MemoryStream(Convert.FromBase64String(encryptCode)))
+                    {
+                        using (CryptoStream ctStream = new CryptoStream(mStream, decryptor, CryptoStreamMode.Read))
+                        {
+                            using (StreamReader sr = new StreamReader(ctStream))
+                            {
+                                plain = sr.ReadLine();
+                            }
+                        }
+                    }
+                    return plain;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "DecryptCode", $"{ex.Message}");
+            }
+            return string.Empty;
+        }
+
+        /// <summary></summary>
+        public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data)
+            => GenerateLicense(configAsset, data, _isDebugLog);
+
         /// <summary>ライセンス生成</summary>
-        public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data, bool isDebugLog = false)
+        public static string GenerateLicense(LicenseConfigAsset configAsset, LicenseData data, bool isDebugLog)
         {
             _isDebugLog = isDebugLog;
 
             try
             {
                 if (string.IsNullOrEmpty(data.Uuid) || string.IsNullOrEmpty(data.ContentsId))
-                    throw new Exception($"licenseData error. deviceId={data.Uuid}, contentsId={data.ContentsId}, expiryDate={data.ExpiryDate:yyyy-MM-dd}");
+                    throw new Exception($"licenseData error. deviceId={data.Uuid}, contentsId={data.ContentsId}, createDate={data.CreateDate:yyyy-MM-dd}, ValidityDays={data.ValidityDays}");
 
-                var keyContainer = configAsset != null ? configAsset.KeyContainer : string.Empty;
-                var licensePassKey = configAsset != null ? configAsset.LicensePassKey : string.Empty;
-
-                if (string.IsNullOrEmpty(keyContainer))
-                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}");
-
-                var licenseData = $"{data.Uuid}|{data.ContentsId}|{licensePassKey}|{data.ExpiryDate:yyyy-MM-dd}";
-                return SignData(licenseData, CreatePrivateKey(keyContainer));
+                return $"{data.Uuid}|{data.ContentsId}|{(configAsset != null ? configAsset.LicensePassKey : string.Empty)}|{data.CreateDate:yyyy-MM-dd}|{data.ValidityDays}";
             }
             catch (Exception ex)
             {
@@ -92,51 +239,9 @@ namespace Renard.License
             return string.Empty;
         }
 
-        private static RSAParameters CreatePrivateKey(string keyContainer)
-        {
-            try
-            {
-                RSAParameters privateKey;
-
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(GetCspParams(keyContainer)))
-                {
-                    privateKey = rsa.ExportParameters(true);
-                    return privateKey;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "CreatePrivateKey", $"{ex.Message}");
-            }
-            return default;
-        }
-
-        private static string SignData(string licenseData, RSAParameters privateKey)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(licenseData))
-                    throw new Exception("null or empty licenseData.");
-
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
-                {
-                    rsa.ImportParameters(privateKey);
-
-                    var dataBytes = Encoding.UTF8.GetBytes(licenseData);
-                    var signedBytes = rsa.SignData(dataBytes, new SHA256Cng());
-                    var signedData = ConvertToBase64String(signedBytes);
-
-                    Log(DebugerLogType.Info, "SignData", $"success\n\r{licenseData}\n\r{signedData}");
-
-                    return $"{licenseData}.{signedData}";
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "SignData", $"{ex.Message}");
-            }
-            return string.Empty;
-        }
+        /// <summary>ライセンス読込み ※ここでは日付のみチェックする</summary>
+        public static LicenseStatusEnum ValidateLicense(LicenseConfigAsset configAsset, string licenseCode, out LicenseData data)
+            => ValidateLicense(configAsset, licenseCode, out data, _isDebugLog);
 
         /// <summary>ライセンス読込み ※ここでは日付のみチェックする</summary>
         public static LicenseStatusEnum ValidateLicense(LicenseConfigAsset configAsset, string licenseCode, out LicenseData date, bool isDebugLog = false)
@@ -148,34 +253,31 @@ namespace Renard.License
 
             try
             {
-                var keyContainer = configAsset != null ? configAsset.KeyContainer : string.Empty;
                 var licensePassKey = configAsset != null ? configAsset.LicensePassKey : string.Empty;
+                var dataParts = licenseCode.Split('|');
 
-                if (string.IsNullOrEmpty(keyContainer))
-                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}");
-
-                var licenseData = VerifySignature(licenseCode, keyContainer);
-                var dataParts = licenseData.Split('|');
-
-                Log(DebugerLogType.Info, "ValidateLicense", $"{licenseCode}\n\r{licenseData}\n\r{dataParts.Length}={partsLength}");
+                Log(DebugerLogType.Info, "ValidateLicense", $"{licenseCode}\n\r{dataParts.Length}={partsLength}");
 
                 if (dataParts.Length == partsLength)
                 {
-                    // 期限チェック
-                    if (DateTime.TryParse(dataParts[3], out date.CreateDate))
-                    {
-                        date.Uuid = dataParts[0];
-                        date.ContentsId = dataParts[1];
-                        date.LicensePassKey = dataParts[2];
+                    // 作成日取得
+                    if (!DateTime.TryParse(dataParts[3], out date.CreateDate))
+                        throw new Exception("create time error.");
 
-                        if (date.ExpiryDate > DateTime.Now)
-                        {
-                            status = LicenseStatusEnum.Success;
-                        }
-                        else
-                        {
-                            status = LicenseStatusEnum.Expired;
-                        }
+                    if (!int.TryParse(dataParts[4], out date.ValidityDays))
+                        throw new Exception("failed get validityDays.");
+
+                    date.Uuid = dataParts[0];
+                    date.ContentsId = dataParts[1];
+                    date.LicensePassKey = dataParts[2];
+
+                    if (date.ValidityDays > 0 && date.ExpiryDate > DateTime.Now)
+                    {
+                        status = LicenseStatusEnum.Success;
+                    }
+                    else
+                    {
+                        status = LicenseStatusEnum.Expired;
                     }
                 }
             }
@@ -187,80 +289,6 @@ namespace Renard.License
                 status = LicenseStatusEnum.Injustice;
             }
             return status;
-        }
-
-        private static CspParameters GetCspParams(string keyContainer)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(keyContainer))
-                    throw new Exception("null or empty keyContainer.");
-
-                var cspParams = new CspParameters();
-                cspParams.KeyContainerName = keyContainer;
-
-                return cspParams;
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "GetCspParams", $"{ex.Message}");
-            }
-            return null;
-        }
-
-        private static RSAParameters CreatePublicKey(string keyContainer)
-        {
-            try
-            {
-#if UNITY_IOS && !UNITY_EDITOR
-                using (var rsa = RSA.Create())
-                {
-                    var bytesRead = 0;
-                    rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(keyContainer), out bytesRead);
-                    return rsa.ExportParameters(false);
-                }
-#else
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(GetCspParams(keyContainer)))
-                {
-                    return rsa.ExportParameters(false);
-                }
-#endif
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "CreatePublicKey", $"{ex.Message}");
-            }
-            return default;
-        }
-
-        private static string VerifySignature(string signedData, string keyContainer)
-        {
-            try
-            {
-                var parts = signedData != null && signedData.Length > 0 ? signedData.Split('.') : null;
-                if (parts == null || parts.Length != 2)
-                    throw new FormatException($"invalid signed data format. dataLength={(signedData != null ? signedData.Length : 0)}");
-
-                var licenseData = parts[0];
-                var signedBytes = Convert.FromBase64String(parts[1]);
-
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
-                {
-                    rsa.ImportParameters(CreatePublicKey(keyContainer));
-                    var dataBytes = Encoding.UTF8.GetBytes(licenseData);
-                    var isValid = rsa.VerifyData(dataBytes, new SHA256Cng(), signedBytes);
-
-                    if (!isValid)
-                        throw new CryptographicException("signature verification failed");
-
-                    return licenseData;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "VerifySignature", $"{ex.Message}");
-            }
-            return string.Empty;
         }
     }
 }

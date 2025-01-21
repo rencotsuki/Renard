@@ -82,9 +82,7 @@ namespace Renard
                 return string.Empty;
             }
         }
-        protected int encryptKeyLength => LicenseConfigAsset.EncryptKeyLength;
         protected string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
-        protected int encryptIVLength => LicenseConfigAsset.EncryptIVLength;
         protected string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
 
         /// <summary>ライセンスファイル生成</summary>
@@ -114,15 +112,6 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(m_EncryptKey) || m_EncryptKey.Length != encryptKeyLength)
-                    throw new Exception($"encryptKey error. length={(m_EncryptKey != null ? m_EncryptKey.Length : 0)}");
-
-                if (string.IsNullOrEmpty(m_EncryptIV) || m_EncryptIV.Length != encryptIVLength)
-                    throw new Exception($"encryptIV error. length={(m_EncryptIV != null ? m_EncryptIV.Length : 0)}");
-
-                if (string.IsNullOrEmpty(licenseCode))
-                    throw new Exception("null or empty licenseCode.");
-
                 if (string.IsNullOrEmpty(outputPath))
                     throw new Exception("null or empty outputPath.");
 
@@ -132,22 +121,15 @@ namespace Renard
                 if (!Directory.Exists(outputPath))
                     Directory.CreateDirectory(outputPath);
 
-                using (Aes aesAlg = Aes.Create())
+                var encryptCode = LicenseManager.EncryptCode(licenseCode, m_EncryptKey, m_EncryptIV, IsDebugLog);
+                if (string.IsNullOrEmpty(encryptCode))
+                    throw new Exception("encrypt error.");
+
+                using (FileStream fs = new FileStream($"{outputPath}/{fileName}", FileMode.Create))
+                using (StreamWriter sw = new StreamWriter(fs))
                 {
-                    aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptIV);
-                    aesAlg.Mode = CipherMode.CBC;
-                    aesAlg.Padding = PaddingMode.PKCS7;
-
-                    ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
-
-                    using (FileStream fs = new FileStream($"{outputPath}/{fileName}", FileMode.Create))
-                    using (CryptoStream cs = new CryptoStream(fs, encryptor, CryptoStreamMode.Write))
-                    using (StreamWriter sw = new StreamWriter(cs))
-                    {
-                        sw.Write(licenseCode);
-                        return true;
-                    }
+                    sw.Write(encryptCode);
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -228,34 +210,24 @@ namespace Renard
         {
             try
             {
-                if (string.IsNullOrEmpty(m_EncryptKey) || m_EncryptKey.Length != encryptKeyLength)
-                    throw new Exception($"encryptKey error. length={(m_EncryptKey != null ? m_EncryptKey.Length : 0)}");
-
-                if (string.IsNullOrEmpty(m_EncryptIV) || m_EncryptIV.Length != encryptIVLength)
-                    throw new Exception($"encryptIV error. length={(m_EncryptIV != null ? m_EncryptIV.Length : 0)}");
-
                 if (string.IsNullOrEmpty(fileFullPath))
                     throw new Exception("null or empty filePath.");
 
                 if (!File.Exists(fileFullPath))
                     throw new Exception($"not found filePath. path={fileFullPath}");
 
-                using (Aes aesAlg = Aes.Create())
+                var encryptCode = string.Empty;
+                using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
+                using (StreamReader sr = new StreamReader(fs))
                 {
-                    aesAlg.Key = Encoding.UTF8.GetBytes(m_EncryptKey);
-                    aesAlg.IV = Encoding.UTF8.GetBytes(m_EncryptIV);
-                    aesAlg.Mode = CipherMode.CBC;
-                    aesAlg.Padding = PaddingMode.PKCS7;
-
-                    ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
-
-                    using (FileStream fs = new FileStream(fileFullPath, FileMode.Open, FileAccess.Read))
-                    using (CryptoStream cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
-                    using (StreamReader sr = new StreamReader(cs))
-                    {
-                        return sr.ReadToEnd();
-                    }
+                    encryptCode = sr.ReadToEnd();
                 }
+
+                var decryptCode = LicenseManager.DecryptCode(encryptCode, m_EncryptKey, m_EncryptIV, IsDebugLog);
+                if (string.IsNullOrEmpty(decryptCode))
+                    throw new Exception("decrypt error.");
+
+                return decryptCode;
             }
             catch (Exception ex)
             {

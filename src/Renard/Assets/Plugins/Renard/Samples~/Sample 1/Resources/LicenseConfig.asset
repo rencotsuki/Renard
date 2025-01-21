@@ -12,8 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e982d561923a74b42a0ba056c7e0f1ac, type: 3}
   m_Name: LicenseConfig
   m_EditorClassIdentifier: 
-  _encryptKey: 0123456789abcdef0123456789abcdef
-  _encryptIV: abcdef0123456789
-  _contentsId: Renard-001A
-  _keyContainer: RenardKeyContainer
-  _licensePassKey: 12345
+  _contentsId: Renard
+  _licensePassKey: 
+  _encryptKey: RNVEFsWKTtxI8fc=2lo*Ze*B1$X/7Grj
+  _encryptIV: aNcy5a7QfX5KtVXb
