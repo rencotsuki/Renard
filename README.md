@@ -9,6 +9,6 @@ Development environment
 Install From  
 　`git@github.com:rencotsuki/Renard.git?path=src/Renard/Assets/Plugins/Renard`  
 
-　※利用するにはsshの設定が必要です。
- 　　特にWindows環境においては、SourceTreeの「Putty/Plink」設定を使っていると、
-   　UPMが使用するOpenSSHと噛み合わないため、SourceTree側を「OpenSSH」設定に合わせる必要があります。
+　※利用するにはsshの設定が必要です。  
+ 　　特にWindows環境においては、SourceTreeの「Putty/Plink」設定を使っていると、  
+ 　　UPMが使用するOpenSSHと噛み合わないため、SourceTree側を「OpenSSH」設定に合わせる必要があります。  
