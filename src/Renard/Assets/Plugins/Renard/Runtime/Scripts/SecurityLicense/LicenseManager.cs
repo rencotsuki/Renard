@@ -154,7 +154,7 @@ namespace Renard.License
                 if (string.IsNullOrEmpty(keyContainer))
                     throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}");
 
-                var licenseData = VerifySignature(licenseCode, CreatePublicKey(keyContainer));
+                var licenseData = VerifySignature(licenseCode, keyContainer);
                 var dataParts = licenseData.Split('|');
 
                 Log(DebugerLogType.Info, "ValidateLicense", $"{licenseCode}\n\r{licenseData}\n\r{dataParts.Length}={partsLength}");
@@ -227,7 +227,27 @@ namespace Renard.License
             return default;
         }
 
-        private static string VerifySignature(string signedData, RSAParameters publicKey)
+        private static string ConvertPublicKeyFromBase64(string keyContainer)
+        {
+            try
+            {
+                var publicKeyBytes = Convert.FromBase64String(keyContainer);
+
+                using (var rsa = RSA.Create())
+                {
+                    var bytesRead = 0;
+                    rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out bytesRead);
+                    return rsa.ToXmlString(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "ConvertPublicKeyFromBase64", $"{ex.Message}");
+            }
+            return string.Empty;
+        }
+
+        private static string VerifySignature(string signedData, string keyContainer)
         {
             try
             {
@@ -240,7 +260,11 @@ namespace Renard.License
 
                 using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
                 {
-                    rsa.ImportParameters(publicKey);
+#if UNITY_IOS && !UNITY_EDITOR
+                    rsa.ImportParameters(ConvertPublicKeyFromBase64(keyContainer));
+#else
+                    rsa.ImportParameters(CreatePublicKey(keyContainer));
+#endif
                     var dataBytes = Encoding.UTF8.GetBytes(licenseData);
                     var isValid = rsa.VerifyData(dataBytes, new SHA256Cng(), signedBytes);
 
