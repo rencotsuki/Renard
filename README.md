@@ -9,8 +9,6 @@ Development environment
 Install From  
 　`git@github.com:rencotsuki/Renard.git?path=src/Renard/Assets/Plugins/Renard`  
 
-　※検証用なのでPrivateRepositoryのまま行いたい  
-　　Win、Macどちらでも同じように使用したい  
-　　ということからPersonalAccessTokens(Classic)を利用しています。  
-　　git-sshのリンクを使おうと思ったがwindowsは環境やアカウントによって色々な問題が発生して、  
-　　各プラットフォーム共通にするためにはこの方法が手っ取り早かった。  
+　※利用するにはsshの設定が必要です。
+ 　　特にWindows環境においては、SourceTreeの「Putty/Plink」設定を使っていると、
+   　UPMが使用するOpenSSHと噛み合わないため、SourceTree側を「OpenSSH」設定に合わせる必要があります。
