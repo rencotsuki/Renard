@@ -212,39 +212,25 @@ namespace Renard.License
         {
             try
             {
-                RSAParameters publicKey;
-
+#if UNITY_IOS && !UNITY_EDITOR
+                using (var rsa = RSA.Create())
+                {
+                    var bytesRead = 0;
+                    rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(keyContainer), out bytesRead);
+                    return rsa.ExportParameters(false);
+                }
+#else
                 using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(GetCspParams(keyContainer)))
                 {
-                    publicKey = rsa.ExportParameters(false);
-                    return publicKey;
+                    return rsa.ExportParameters(false);
                 }
+#endif
             }
             catch (Exception ex)
             {
                 Log(DebugerLogType.Warning, "CreatePublicKey", $"{ex.Message}");
             }
             return default;
-        }
-
-        private static string ConvertPublicKeyFromBase64(string keyContainer)
-        {
-            try
-            {
-                var publicKeyBytes = Convert.FromBase64String(keyContainer);
-
-                using (var rsa = RSA.Create())
-                {
-                    var bytesRead = 0;
-                    rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out bytesRead);
-                    return rsa.ToXmlString(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(DebugerLogType.Warning, "ConvertPublicKeyFromBase64", $"{ex.Message}");
-            }
-            return string.Empty;
         }
 
         private static string VerifySignature(string signedData, string keyContainer)
@@ -260,11 +246,7 @@ namespace Renard.License
 
                 using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
                 {
-#if UNITY_IOS && !UNITY_EDITOR
-                    rsa.ImportParameters(ConvertPublicKeyFromBase64(keyContainer));
-#else
                     rsa.ImportParameters(CreatePublicKey(keyContainer));
-#endif
                     var dataBytes = Encoding.UTF8.GetBytes(licenseData);
                     var isValid = rsa.VerifyData(dataBytes, new SHA256Cng(), signedBytes);
 
