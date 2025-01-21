@@ -22,6 +22,7 @@ namespace Renard
     {
         public string Uuid;
         public string ContentsId;
+        public string LicensePassKey;
         public DateTime CreateDate;
         public int ValidityDays;
 
@@ -78,8 +79,8 @@ namespace Renard.License
                 var keyContainer = configAsset != null ? configAsset.KeyContainer : string.Empty;
                 var licensePassKey = configAsset != null ? configAsset.LicensePassKey : string.Empty;
 
-                if (string.IsNullOrEmpty(keyContainer) || string.IsNullOrEmpty(licensePassKey))
-                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}, passKeyLength={(licensePassKey != null ? licensePassKey.Length : 0)}");
+                if (string.IsNullOrEmpty(keyContainer))
+                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}");
 
                 var licenseData = $"{data.Uuid}|{data.ContentsId}|{licensePassKey}|{data.ExpiryDate:yyyy-MM-dd}";
                 return SignData(licenseData, CreatePrivateKey(keyContainer));
@@ -150,8 +151,8 @@ namespace Renard.License
                 var keyContainer = configAsset != null ? configAsset.KeyContainer : string.Empty;
                 var licensePassKey = configAsset != null ? configAsset.LicensePassKey : string.Empty;
 
-                if (string.IsNullOrEmpty(keyContainer) || string.IsNullOrEmpty(licensePassKey))
-                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}, passKeyLength={(licensePassKey != null ? licensePassKey.Length : 0)}");
+                if (string.IsNullOrEmpty(keyContainer))
+                    throw new Exception($"null or empty licenseConfig. keyContainer={keyContainer}");
 
                 var licenseData = VerifySignature(licenseCode, CreatePublicKey(keyContainer));
                 var dataParts = licenseData.Split('|');
@@ -160,21 +161,20 @@ namespace Renard.License
 
                 if (dataParts.Length == partsLength)
                 {
-                    if (dataParts[2] == licensePassKey)
+                    // 期限チェック
+                    if (DateTime.TryParse(dataParts[3], out date.CreateDate))
                     {
-                        if (DateTime.TryParse(dataParts[3], out date.CreateDate))
-                        {
-                            date.Uuid = dataParts[0];
-                            date.ContentsId = dataParts[1];
+                        date.Uuid = dataParts[0];
+                        date.ContentsId = dataParts[1];
+                        date.LicensePassKey = dataParts[2];
 
-                            if (date.ExpiryDate > DateTime.Now)
-                            {
-                                status = LicenseStatusEnum.Success;
-                            }
-                            else
-                            {
-                                status = LicenseStatusEnum.Expired;
-                            }
+                        if (date.ExpiryDate > DateTime.Now)
+                        {
+                            status = LicenseStatusEnum.Success;
+                        }
+                        else
+                        {
+                            status = LicenseStatusEnum.Expired;
                         }
                     }
                 }

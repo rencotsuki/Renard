@@ -52,6 +52,7 @@ namespace Renard
         protected LicenseData licenseData = default;
         public string Uuid => licenseData.Uuid;
         public string ContentsId => licenseData.ContentsId;
+        public string LicensePassKey => licenseData.LicensePassKey;
         public string ExpiryDate => $"{licenseData.ExpiryDate:yyyy-MM-dd}";
 
         private LicenseConfigAsset _licenseConfig = null;
@@ -72,11 +73,7 @@ namespace Renard
                 return _licenseConfig;
             }
         }
-        protected int encryptKeyLength => LicenseConfigAsset.EncryptKeyLength;
-        protected string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
-        protected int encryptIVLength => LicenseConfigAsset.EncryptIVLength;
-        protected string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
-        public string m_ContentsId
+        public string ConfigContentsId
         {
             get
             {
@@ -85,6 +82,10 @@ namespace Renard
                 return string.Empty;
             }
         }
+        protected int encryptKeyLength => LicenseConfigAsset.EncryptKeyLength;
+        protected string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
+        protected int encryptIVLength => LicenseConfigAsset.EncryptIVLength;
+        protected string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
 
         /// <summary>ライセンスファイル生成</summary>
         public bool Create(LicenseData data)
@@ -204,11 +205,15 @@ namespace Renard
                     }
 
                     // contentsIdをチェック
-                    if (string.IsNullOrEmpty(m_ContentsId) || m_ContentsId != licenseData.ContentsId)
+                    if (string.IsNullOrEmpty(ConfigContentsId) || ConfigContentsId != licenseData.ContentsId)
                     {
                         Status = LicenseStatusEnum.Injustice;
                         throw new Exception($"injustice license. contentsId error.");
                     }
+
+                    /*
+                     * licensePassKeyのチェックはアプリ側で判断する
+                     */
                 }
             }
             catch (Exception ex)
@@ -297,7 +302,7 @@ namespace Renard
                 m_handler = handler;
 
                 m_createData.Uuid = string.Empty;
-                m_createData.ContentsId = m_handler != null ? m_handler.m_ContentsId : string.Empty;
+                m_createData.ContentsId = m_handler != null ? m_handler.ConfigContentsId : string.Empty;
                 m_createData.CreateDate = DateTime.UtcNow;
                 m_createData.ValidityDays = 0;
 
@@ -320,7 +325,7 @@ namespace Renard
                 {
                     if (GUILayout.Button("Default", new GUILayoutOption[] { GUILayout.Height(20) }))
                     {
-                        m_createData.ContentsId = m_handler.m_ContentsId;
+                        m_createData.ContentsId = m_handler.ConfigContentsId;
                     }
                 }
 

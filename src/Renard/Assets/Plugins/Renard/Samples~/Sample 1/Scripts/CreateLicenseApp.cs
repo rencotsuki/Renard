@@ -125,7 +125,7 @@ namespace Renard.Sample
 
         private void SetDefaultContentsId()
         {
-            editData.ContentsId = handler != null ? handler.m_ContentsId : string.Empty;
+            editData.ContentsId = handler != null ? handler.ConfigContentsId : string.Empty;
             inputFieldContentsId.text = editData.ContentsId;
         }
 
