@@ -1,8 +1,11 @@
+#if RENARD_USING_URP
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.Universal;
+#if UNITY_6000_0_OR_NEWER
+using UnityEngine.Rendering.RenderGraphModule;
+#endif // UNITY_6000_0_OR_NEWER
 
 namespace Renard
 {
@@ -79,7 +82,7 @@ namespace Renard
                     Debug.Log($"{this.GetType().Name}::Execute - {ex.Message}");
                 }
             }
-#endif
+#endif  // UNITY_6000_0_OR_NEWER
         }
 
         protected CustomRenderPass renderPass { get; private set; } = null;
@@ -111,3 +114,4 @@ namespace Renard
         }
     }
 }
+#endif // RENARD_USING_URP

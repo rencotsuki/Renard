@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e00dd6c236cad046ae2d633f0c2051b, type: 3}
   m_Name: ApplicationVersion
   m_EditorClassIdentifier: 
+  _commitHash: commit hash...
   _version: 1.0.0
-  _buildNumber: 0
+  _buildNumber: 1

@@ -1,3 +1,4 @@
+#if RENARD_USING_URP
 using System;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -41,3 +42,4 @@ namespace Renard
         }
     }
 }
+#endif // RENARD_USING_URP

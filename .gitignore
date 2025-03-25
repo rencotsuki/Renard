@@ -131,8 +131,6 @@ Assets/WSATestCertificate.pfx
 .vs/
 
 # Unity
-
-# Unity
 .vsconfig
 src/CreateLicenses/*
 src/License/*

@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using UnityEngine;
+
+#if UNITY_IOS && !UNITY_EDITOR
 using System.Runtime.InteropServices;
-using UnityEngine;
+#endif // UNITY_IOS && !UNITY_EDITOR
 
 namespace Renard
 {
@@ -15,13 +17,7 @@ namespace Renard
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void GetVersion()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            GetAppVersionName_Android(out Version, out BuildVersion);
-#elif UNITY_IPHONE && !UNITY_EDITOR
-            GetAppVersionName_iOS(out Version, out BuildVersion);
-#else
             GetAppVersionName(out Version, out BuildVersion);
-#endif
         }
 
         private enum versionMoji { Major, Minor, Revision };
@@ -59,21 +55,33 @@ namespace Renard
             outVersion = Application.version;
             outBuildVersion = int.Parse(UnityEditor.PlayerSettings.macOS.buildNumber);
 #else
-            var asset = ApplicationVersionAsset.Load();
-            outVersion = asset != null ? asset.Version : "0.0.0";
-            outBuildVersion = asset != null ? asset.BuildNumber : 0;
-#endif
-        }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        /// <summary>Android版でのバージョンを取得する</summary>
-        private static void GetAppVersionName_Android (out string outVersion, out int outBuildVersion)
-        {
+#if UNITY_ANDROID
             var pInfo = GetPackageInfo();
             outVersion = pInfo != null ? pInfo.Get<string>("versionName") : "0.0.0";
             outBuildVersion = pInfo != null ? pInfo.Get<int>("versionCode") : 0;
+#elif UNITY_IOS
+            outVersion = GetVersionName_();
+            outBuildVersion = int.Parse(GetBuildVersionName_());
+#else
+            var asset = ApplicationVersionAsset.Load();
+            outVersion = asset != null ? asset.Version : "0.0.0";
+            outBuildVersion = asset != null ? asset.BuildNumber : 0;
+#endif // UNITY_ANDROID || UNITY_IOS
+
+#endif // UNITY_EDITOR
         }
 
+#if !UNITY_EDITOR
+
+#if UNITY_IOS
+        [DllImport("__Internal")]
+        private static extern string GetVersionName_();
+        [DllImport("__Internal")]
+        private static extern string GetBuildVersionName_();
+#endif // UNITY_IOS
+
+#if UNITY_ANDROID
         private static AndroidJavaObject GetPackageInfo()
         {
             try
@@ -105,20 +113,8 @@ namespace Renard
                 return null;
             }
         }
-#endif //UNITY_ANDROID
+#endif // UNITY_ANDROID
 
-#if UNITY_IPHONE && !UNITY_EDITOR
-        [DllImport("__Internal")]
-        private static extern string GetVersionName_();
-        [DllImport("__Internal")]
-        private static extern string GetBuildVersionName_();
-
-        /// <summary>iOS版でのバージョンを取得する</summary>
-        public static void GetAppVersionName_iOS(out string outVersion, out int outBuildVersion)
-        {
-            outVersion = GetVersionName_ ();
-            outBuildVersion = int.Parse(GetBuildVersionName_());
-        }    
-#endif //UNITY_IPHONE
+#endif // !UNITY_EDITOR
     }
 }

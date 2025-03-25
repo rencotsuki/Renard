@@ -1,27 +1,23 @@
 using System;
-using System.Security.Cryptography;
+using System.Linq;
 using System.IO;
-using System.Text;
 using UnityEngine;
 
 #if UNITY_EDITOR
-using System.Linq;
 using UnityEditor;
 #endif
 
 namespace Renard
 {
     using License;
+    using QRCode;
+    using Debuger;
 
-    public class LicenseHandler : MonoBehaviourCustom
+    public sealed class LicenseHandler
     {
-        protected string fileName => $"License-{Application.productName}";
-        protected string fileExtension => ""; //拡張子を付けられるようにしておく
-        public string FileFullName => $"{(string.IsNullOrEmpty(fileExtension) ? fileName : $"{fileName}.{fileExtension}")}";
-
         public const string DefaultLocalPath = "License";
 
-        public string OutputPath
+        public static string OutputPath
         {
             get
             {
@@ -33,7 +29,7 @@ namespace Renard
             }
         }
 
-        protected string activationFilePath
+        private static string activationFilePath
         {
             get
             {
@@ -45,18 +41,23 @@ namespace Renard
             }
         }
 
-        public LicenseStatusEnum Status { get; protected set; } = LicenseStatusEnum.None;
+        public static LicenseStatusEnum Status { get; private set; } = LicenseStatusEnum.None;
 
         public static int[] ValidityDaysList => new int[] { 7, 14, 21, 30, 60, 120, 180, 210, 240, 270, 300, 330, 365 };
 
-        protected LicenseData licenseData = default;
-        public string Uuid => licenseData.Uuid;
-        public string ContentsId => licenseData.ContentsId;
-        public string LicensePassKey => licenseData.LicensePassKey;
-        public string ExpiryDate => $"{licenseData.ExpiryDate:yyyy-MM-dd}";
+        private static LicenseData licenseData = default;
 
-        private LicenseConfigAsset _licenseConfig = null;
-        protected LicenseConfigAsset licenseConfig
+        //-- LicenseDataの見せても良い情報だけPublic定義
+        public static string LicensePassKey => licenseData.LicensePassKey;
+        public static DateTime CreateDateTime => licenseData.CreateDate;
+        public static string CreateDate => $"{CreateDateTime:yyyy-MM-dd}";
+        public static int ValidityDays => licenseData.ValidityDays;
+        public static DateTime ExpiryDateTime => licenseData.ExpiryDate;
+        public static string ExpiryDate => $"{ExpiryDateTime:yyyy-MM-dd}";
+        //--
+
+        private static LicenseConfigAsset _licenseConfig = null;
+        private static LicenseConfigAsset licenseConfig
         {
             get
             {
@@ -67,13 +68,22 @@ namespace Renard
                 }
                 catch (Exception ex)
                 {
-                    Log(DebugerLogType.Info, "licenseConfig", $"{ex.Message}");
+                    Log(DebugerLogType.Info, "LicenseConfig", $"{ex.Message}");
                     _licenseConfig = null;
                 }
                 return _licenseConfig;
             }
         }
-        public string ConfigContentsId
+        public static string LicenseFileExtension
+        {
+            get
+            {
+                if (licenseConfig != null)
+                    return licenseConfig.LicenseFileExtension;
+                return string.Empty;
+            }
+        }
+        public static string ConfigContentsId
         {
             get
             {
@@ -82,36 +92,75 @@ namespace Renard
                 return string.Empty;
             }
         }
-        protected string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
-        protected string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
+        private static string m_EncryptKey =>licenseConfig != null ? licenseConfig.EncryptKey : string.Empty;
+        private static string m_EncryptIV => licenseConfig != null ? licenseConfig.EncryptIV : string.Empty;
+
+        private static string fileName => $"License-{Application.productName}";
+        private static string fileFullName => $"{(string.IsNullOrEmpty(LicenseFileExtension) ? fileName : $"{fileName}.{LicenseFileExtension}")}";
+        private static string imageFileExtension => "png";
+        private static string imageFullName => $"LicenseQRCode-{Application.productName}.{imageFileExtension}";
+
+        private static bool _isDebugLog = false;
+
+        private static void Log(DebugerLogType logType, string methodName, string message)
+        {
+            if (!_isDebugLog)
+            {
+                if (logType == DebugerLogType.Info)
+                    return;
+            }
+
+            DebugLogger.Log(typeof(LicenseManager), logType, methodName, message);
+        }
+
+        /// <summary>時間取得(UtcNow)</summary>
+        public static DateTime GetNow() => DateTime.UtcNow;
 
         /// <summary>ライセンスファイル生成</summary>
-        public bool Create(LicenseData data)
+        public static bool Create(LicenseData data, bool isDebugLog = false)
         {
+            return Create(data, out Texture2D qrCore, Vector2Int.zero, isDebugLog);
+        }
+
+        // 暗号化して保存
+        private static bool OnEncryptAndSaveToFile(string licenseCode, string outputPath, out Texture2D qrCore, Vector2Int qrCoreSize)
+        {
+            qrCore = null;
+
             try
             {
-                if (licenseConfig == null)
+                var encryptCode = AESGenerator.Encrypt(licenseCode, m_EncryptKey, m_EncryptIV, _isDebugLog);
+                if (string.IsNullOrEmpty(encryptCode))
+                    throw new Exception("encrypt error.");
+
+                // QRコード生成
+                if (qrCoreSize.x > 0 && qrCoreSize.y > 0)
                 {
-                    Debug.Log("<color=yellow>【重要】</color> LicenseConfig.assetが定義されていません。");
-                    throw new Exception("not found licenseConfig.");
+                    qrCore = QRCodeHelper.CreateQRCode(encryptCode, qrCoreSize.x, qrCoreSize.y, _isDebugLog);
+
+                    if (!OnWriteImage(qrCore, outputPath, imageFullName))
+                    {
+                        Log(DebugerLogType.Warning, "OnEncryptAndSaveToFile", "create QRcode image failed.");
+                    }
                 }
 
-                // ライセンスコードを生成
-                var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data, IsDebugLog);
-                return OnEncryptAndSaveToFile(licenseCode, OutputPath, FileFullName);
+                return OnWriteFile(encryptCode, outputPath, fileFullName);
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Warning, "Encrypt", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "OnEncryptAndSaveToFile", $"{ex.Message}");
             }
             return false;
         }
 
-        // 暗号化して保存
-        protected bool OnEncryptAndSaveToFile(string licenseCode, string outputPath, string fileName)
+        // ファイルに保存
+        private static bool OnWriteFile(string dataString, string outputPath, string fileName)
         {
             try
             {
+                if (string.IsNullOrEmpty(dataString))
+                    throw new Exception("null or empty write data.");
+
                 if (string.IsNullOrEmpty(outputPath))
                     throw new Exception("null or empty outputPath.");
 
@@ -121,29 +170,53 @@ namespace Renard
                 if (!Directory.Exists(outputPath))
                     Directory.CreateDirectory(outputPath);
 
-                var encryptCode = LicenseManager.EncryptCode(licenseCode, m_EncryptKey, m_EncryptIV, IsDebugLog);
-                if (string.IsNullOrEmpty(encryptCode))
-                    throw new Exception("encrypt error.");
-
                 using (FileStream fs = new FileStream($"{outputPath}/{fileName}", FileMode.Create))
                 using (StreamWriter sw = new StreamWriter(fs))
                 {
-                    sw.Write(encryptCode);
+                    sw.Write(dataString);
                     return true;
                 }
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Warning, "OnEncryptAndSaveToFile", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "OnWriteFile", $"{ex.Message}");
+            }
+            return false;
+        }
+
+        // 画像ファイルに保存
+        private static bool OnWriteImage(Texture2D imageData, string outputPath, string fileName)
+        {
+            try
+            {
+                if (imageData == null)
+                    throw new Exception("null write image.");
+
+                if (string.IsNullOrEmpty(outputPath))
+                    throw new Exception("null or empty outputPath.");
+
+                if (string.IsNullOrEmpty(fileName))
+                    throw new Exception("null or empty fileName.");
+
+                if (!Directory.Exists(outputPath))
+                    Directory.CreateDirectory(outputPath);
+
+                var imageBinary = imageData.EncodeToPNG();
+                File.WriteAllBytes($"{outputPath}/{fileName}", imageBinary);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "OnWriteImage", $"{ex.Message}");
             }
             return false;
         }
 
         /// <summary>ライセンス確認</summary>
-        public LicenseStatusEnum Activation(string uuid, string localPath = DefaultLocalPath)
+        public static LicenseStatusEnum Activation(string uuid, string localPath = DefaultLocalPath, bool isDebugLog = false)
         {
             Status = LicenseStatusEnum.None;
             licenseData = default;
+            _isDebugLog = isDebugLog;
 
             try
             {
@@ -167,14 +240,33 @@ namespace Renard
                 }
 
                 // ライセンスコードを読込み
-                var licenseCode = OnDecryptFromFile($"{filePath}/{FileFullName}");
+                var licenseCode = OnDecryptFromFile($"{filePath}/{fileFullName}");
                 if (licenseCode == null || licenseCode.Length <= 0)
                 {
                     Status = LicenseStatusEnum.NotFile;
-                    throw new Exception($"not found file. path={filePath}/{FileFullName}");
+                    throw new Exception($"not found file. path={filePath}/{fileFullName}");
                 }
 
-                Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData, IsDebugLog);
+                Status = OnValidateLicense(uuid, licenseCode, out licenseData);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "Activation", $"{ex.Message}");
+            }
+            return Status;
+        }
+
+        // ライセンスチェック
+        private static LicenseStatusEnum OnValidateLicense(string uuid, string licenseCode, out LicenseData licenseData)
+        {
+            licenseData = default;
+
+            try
+            {
+                if (licenseConfig == null)
+                    throw new Exception("not found licenseConfig.");
+
+                Status = LicenseManager.ValidateLicense(licenseConfig, licenseCode, out licenseData, _isDebugLog);
 
                 // ライセンスデータを確認する
                 if (Status == LicenseStatusEnum.Success)
@@ -200,13 +292,34 @@ namespace Renard
             }
             catch (Exception ex)
             {
-                Log(DebugerLogType.Warning, "Activation", $"{ex.Message}");
+                Log(DebugerLogType.Warning, "OnValidateLicense", $"{ex.Message}");
             }
             return Status;
         }
 
-        // 復号化して読込み
-        protected string OnDecryptFromFile(string fileFullPath)
+        // 復号化
+        private static string OnDecryptCode(string dataCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(dataCode))
+                    throw new Exception("null or empty dataCode.");
+
+                var decryptCode = AESGenerator.Decrypt(dataCode, m_EncryptKey, m_EncryptIV, _isDebugLog);
+                if (string.IsNullOrEmpty(decryptCode))
+                    throw new Exception("decrypt error.");
+
+                return decryptCode;
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "OnDecryptCode", $"{ex.Message}");
+            }
+            return string.Empty;
+        }
+
+        // ファイルを読込んで復号化
+        private static string OnDecryptFromFile(string fileFullPath)
         {
             try
             {
@@ -223,11 +336,7 @@ namespace Renard
                     encryptCode = sr.ReadToEnd();
                 }
 
-                var decryptCode = LicenseManager.DecryptCode(encryptCode, m_EncryptKey, m_EncryptIV, IsDebugLog);
-                if (string.IsNullOrEmpty(decryptCode))
-                    throw new Exception("decrypt error.");
-
-                return decryptCode;
+                return OnDecryptCode(encryptCode);
             }
             catch (Exception ex)
             {
@@ -235,107 +344,366 @@ namespace Renard
             }
             return string.Empty;
         }
+
+        /// <summary>ライセンスファイル生成（QRCodeも生成）</summary>
+        public static bool Create(LicenseData data, out Texture2D qrCore, Vector2Int qrCoreSize, bool isDebugLog = false)
+        {
+            _isDebugLog = isDebugLog;
+            qrCore = null;
+
+            try
+            {
+                if (licenseConfig == null)
+                {
+                    Debug.Log("<color=yellow>【重要】</color> LicenseConfig.assetが定義されていません。");
+                    throw new Exception("not found licenseConfig.");
+                }
+
+                // ライセンスコードを生成
+                var licenseCode = LicenseManager.GenerateLicense(licenseConfig, data, _isDebugLog);
+                return OnEncryptAndSaveToFile(licenseCode, OutputPath, out qrCore, qrCoreSize);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "Create", $"{ex.Message}");
+            }
+            return false;
+        }
+
+        /// <summary>ライセンスＱＲコード読込みとファイル生成</summary>
+        public static bool ReadQRCodeToCreateFile(string uuid, Texture2D readQRCore, string localPath = DefaultLocalPath, bool isDebugLog = false)
+        {
+            _isDebugLog = isDebugLog;
+
+            try
+            {
+                if (readQRCore == null)
+                    throw new Exception("not qrcode texture.");
+
+                // QRCodeの読み取り
+                var encryptCode = QRCodeHelper.Read(readQRCore, _isDebugLog);
+
+                return OnReadQRCodeToCreateFile(uuid, encryptCode, localPath);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "ReadQRCodeToCreateFile", $"[Texture2D] {ex.Message}");
+            }
+            return false;
+        }
+
+        /// <summary>ライセンスＱＲコード読込みとファイル生成</summary>
+        public static bool ReadQRCodeToCreateFile(string uuid, WebCamTexture readQRCore, string localPath = DefaultLocalPath, bool isDebugLog = false)
+        {
+            _isDebugLog = isDebugLog;
+
+            try
+            {
+                if (readQRCore == null)
+                    throw new Exception("not qrcode texture.");
+
+                // QRCodeの読み取り
+                var encryptCode = QRCodeHelper.Read(readQRCore, _isDebugLog);
+
+                return OnReadQRCodeToCreateFile(uuid, encryptCode, localPath);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "ReadQRCodeToCreateFile", $"[WebCamTexture] {ex.Message}");
+            }
+            return false;
+        }
+
+        private static bool OnReadQRCodeToCreateFile(string uuid, string encryptCode, string localPath = DefaultLocalPath)
+        {
+            try
+            {
+                var licenseCode = OnDecryptCode(encryptCode);
+
+                // ライセンス確認をしてから保存する
+                var status = OnValidateLicense(uuid, licenseCode, out LicenseData licenseData);
+                if (status != LicenseStatusEnum.Success)
+                    throw new Exception("failed validate license.");
+
+                var localPathTrim = string.IsNullOrEmpty(localPath) ? string.Empty : localPath.TrimStart().TrimEnd();
+                var filePath = string.IsNullOrEmpty(localPathTrim) ? activationFilePath : $"{activationFilePath}/{localPathTrim}";
+
+                return OnWriteFile(encryptCode, filePath, fileFullName);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "ReadQRCodeToCreateFile", $"{ex.Message}");
+            }
+            return false;
+        }
+
+#if UNITY_EDITOR
+
+        [MenuItem("Renard/License/Open CreateLicenseEditor", false)]
+        private static void OpenCreateLicenseEditor()
+        {
+            CreateEditorWindow.ShowWindow();
+        }
+
+#endif
     }
 
 #if UNITY_EDITOR
 
-    [CustomEditor(typeof(LicenseHandler))]
-    public class LicenseHandlerEditor : Editor
+    // ライセンス発行ウィンドウ(Editor)
+    public class CreateEditorWindow : EditorWindow
     {
-        public override void OnInspectorGUI()
+        private static LicenseData m_createData = new LicenseData();
+
+        private static readonly Vector2Int qrCodeSize = new Vector2Int(128, 128);
+
+        private int _validityDaysIndex = 0;
+        private int _validityDays = 0;
+        private bool _createSuccess = false;
+        private Texture2D _qrCodeTexture = null;
+
+        public static void ShowWindow()
         {
-            var handler = target as LicenseHandler;
+            var window = GetWindow<CreateEditorWindow>();
+            window.titleContent = new GUIContent("License");
+            window.maxSize = new Vector2(400, 400);
+            window.minSize = new Vector2(400, 400);
 
-            if (GUILayout.Button("CreateWindow"))
-            {
-                CreateEditorWindow.ShowWindow(handler);
-            }
+            m_createData.Uuid = string.Empty;
+            m_createData.ContentsId = LicenseHandler.ConfigContentsId;
+            m_createData.CreateDate = DateTime.UtcNow;
+            m_createData.ValidityDays = 0;
 
-            EditorGUILayout.Space();
-
-            DrawDefaultInspector();
+            window.Show();
         }
 
-        public class CreateEditorWindow : EditorWindow
+        private void OnGUI()
         {
-            private static LicenseHandler m_handler = null;
-            private static LicenseData m_createData = new LicenseData();
-
-            private int _validityDaysIndex = 0;
-            private int _validityDays = 0;
-
-            public static void ShowWindow(LicenseHandler handler)
+            try
             {
-                var window = GetWindow<CreateEditorWindow>();
-                window.titleContent = new GUIContent("License");
-                window.maxSize = new Vector2(400, 200);
-                window.minSize = new Vector2(400, 200);
+                DrawUI();
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(CreateEditorWindow).Name}::OnGUI - {ex.Message}");
+            }
+        }
 
-                m_handler = handler;
+        public void SetUuid(string value)
+        {
+            m_createData.Uuid = value;
+        }
 
-                m_createData.Uuid = string.Empty;
-                m_createData.ContentsId = m_handler != null ? m_handler.ConfigContentsId : string.Empty;
-                m_createData.CreateDate = DateTime.UtcNow;
-                m_createData.ValidityDays = 0;
+        private void DrawUI()
+        {
+            GUILayout.Label("Create License");
 
-                window.Show();
+            //-- 編集項目
+
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUILayout.LabelField("Uuid", new GUILayoutOption[] { GUILayout.ExpandWidth(true) });
+
+            if (GUILayout.Button("QRCode", new GUILayoutOption[] { GUILayout.Height(20), GUILayout.Width(100) }))
+            {
+                ReadQRCodeEditorWindow.ShowWindow(this);
             }
 
-            private void OnGUI()
+            EditorGUILayout.EndHorizontal();
+
+            m_createData.Uuid = EditorGUILayout.TextField(m_createData.Uuid);
+
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUILayout.LabelField("ContentsId", new GUILayoutOption[] { GUILayout.Width(150) });
+
+            if (GUILayout.Button("Default", new GUILayoutOption[] { GUILayout.Height(20) }))
             {
-                GUILayout.Label("Create License");
+                m_createData.ContentsId = LicenseHandler.ConfigContentsId;
+            }
 
-                //-- 編集項目
+            m_createData.ContentsId = EditorGUILayout.TextField(m_createData.ContentsId);
 
-                m_createData.Uuid = EditorGUILayout.TextField("Uuid", m_createData.Uuid);
+            EditorGUILayout.EndHorizontal();
 
-                EditorGUILayout.BeginHorizontal();
+            var dayOptions = LicenseHandler.ValidityDaysList.Select(x => $"{x}day").ToArray();
+            _validityDaysIndex = EditorGUILayout.Popup("ValidityDays", _validityDaysIndex, dayOptions);
 
-                EditorGUILayout.LabelField("ContentsId", new GUILayoutOption[] { GUILayout.Width(150) });
+            _validityDays = LicenseHandler.ValidityDaysList.Length <= _validityDaysIndex ? 0 : LicenseHandler.ValidityDaysList[_validityDaysIndex];
 
-                if (m_handler != null)
+            m_createData.CreateDate = DateTime.UtcNow;
+            m_createData.ValidityDays = _validityDays;
+
+            EditorGUILayout.LabelField($"ExpiryDate(utc) [{_validityDays}day]: {m_createData.CreateDate:yyyy-MM-dd} -> {m_createData.ExpiryDate:yyyy-MM-dd}");
+
+            //--
+
+            GUILayout.Space(EditorGUIUtility.singleLineHeight);
+
+            if (m_createData.ValidityDays > 0)
+            {
+                if (GUILayout.Button("Create", new GUILayoutOption[] { GUILayout.ExpandWidth(true) }))
                 {
-                    if (GUILayout.Button("Default", new GUILayoutOption[] { GUILayout.Height(20) }))
-                    {
-                        m_createData.ContentsId = m_handler.ConfigContentsId;
-                    }
+                    _createSuccess = LicenseHandler.Create(m_createData, out _qrCodeTexture, qrCodeSize, true);
                 }
+            }
 
-                m_createData.ContentsId = EditorGUILayout.TextField(m_createData.ContentsId);
+            EditorGUILayout.LabelField("【Status】");
 
-                EditorGUILayout.EndHorizontal();
+            if (_createSuccess)
+            {
+                EditorGUILayout.LabelField("Success!");
 
-                var dayOptions = LicenseHandler.ValidityDaysList.Select(x => $"{x}day").ToArray();
-                _validityDaysIndex = EditorGUILayout.Popup("ValidityDays", _validityDaysIndex, dayOptions);
+                EditorGUILayout.LabelField("[Path]");
+                var style = new GUIStyle(GUI.skin.label);
+                style.wordWrap = true;
+                EditorGUILayout.LabelField($"{LicenseHandler.OutputPath}", style, GUILayout.ExpandWidth(true));
 
-                _validityDays = LicenseHandler.ValidityDaysList.Length <= _validityDaysIndex ? 0 : LicenseHandler.ValidityDaysList[_validityDaysIndex];
-
-                m_createData.CreateDate = DateTime.UtcNow;
-                m_createData.ValidityDays = _validityDays;
-
-                EditorGUILayout.LabelField($"ExpiryDate(utc) [{_validityDays}day]: {m_createData.CreateDate:yyyy-MM-dd} -> {m_createData.ExpiryDate:yyyy-MM-dd}");
-
-                //--
-
-                GUILayout.Space(EditorGUIUtility.singleLineHeight);
-
-                if (m_handler != null && m_createData.ValidityDays > 0)
+                if (_qrCodeTexture != null)
                 {
-                    if (GUILayout.Button("Create", new GUILayoutOption[] { GUILayout.ExpandWidth(true) }))
-                    {
-                        GUILayout.Space(EditorGUIUtility.singleLineHeight);
+                    EditorGUILayout.LabelField("[QRCode]");
+                    EditorGUILayout.LabelField(new GUIContent(_qrCodeTexture), GUILayout.Height(qrCodeSize.x), GUILayout.Width(qrCodeSize.y));
+                }
+            }
+        }
+    }
 
-                        if (m_handler.Create(m_createData))
-                        {
-                            GUILayout.Label($"<color=yellow>Success</color>. path={m_handler.OutputPath}/{m_handler.OutputPath}");
-                        }
-                        else
-                        {
-                            GUILayout.Label($"<color=red>Failed</color>.");
-                        }
+    // QRコード読取りウィンドウ(Editor)
+    public class ReadQRCodeEditorWindow : EditorWindow
+    {
+        private static ReadQRCodeEditorWindow window = null;
+        private static WebCamTexture webcamTexture = null;
+        private static readonly Vector2Int qrCodeSize = new Vector2Int(256, 256);
+        private static readonly int fps = 30;
+        private static CreateEditorWindow createWindow = null;
+
+        private bool isOpenWindow = false;
+        private string uuid = string.Empty;
+
+        public static void ShowWindow(CreateEditorWindow target)
+        {
+            if (target == null)
+                return;
+
+            if (window != null && window.isOpenWindow)
+                return;
+
+            createWindow = target;
+
+            window = GetWindow<ReadQRCodeEditorWindow>();
+            window.titleContent = new GUIContent("ReadQRCode");
+            window.maxSize = new Vector2(400, 300);
+            window.minSize = new Vector2(400, 300);
+
+            if (StartCamera())
+            {
+                window.isOpenWindow = true;
+                window.ShowPopup();
+            }
+        }
+
+        public static void CloseWindow()
+        {
+            StopCamera();
+
+            if (window != null)
+            {
+                window.isOpenWindow = false;
+                window.Close();
+            }
+
+            window = null;
+        }
+
+        private void OnLostFocus()
+        {
+            // フォーカスを失ったら閉じる
+            CloseWindow();
+        }
+
+        private void OnInspectorUpdate()
+        {
+            Repaint();
+        }
+
+        private void OnGUI()
+        {
+            try
+            {
+                if (createWindow != null)
+                {
+                    DrawUI();
+                }
+                else
+                {
+                    CloseWindow();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"{typeof(CreateEditorWindow).Name}::OnGUI - {ex.Message}");
+            }
+        }
+
+        private static bool StartCamera()
+        {
+            try
+            {
+                StopCamera();
+
+                webcamTexture = new WebCamTexture(WebCamTexture.devices[0].name, qrCodeSize.x, qrCodeSize.y, fps);
+                webcamTexture.Play();
+                return true;
+            }
+            catch
+            {
+                // 何もしない
+            }
+            return false;
+        }
+
+        private static void StopCamera()
+        {
+            webcamTexture?.Stop();
+            webcamTexture = null;
+        }
+
+        private void DrawUI()
+        {
+            GUILayout.Label("QRCode Reader");
+
+            if (webcamTexture != null)
+            {
+                // 中央寄せ
+                using (new GUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    EditorGUILayout.LabelField(new GUIContent(webcamTexture), GUILayout.Height(qrCodeSize.x), GUILayout.Width(qrCodeSize.y));
+                    GUILayout.FlexibleSpace();
+                }
+            }
+
+            EditorGUILayout.BeginHorizontal();
+
+            if (GUILayout.Button("Read", new GUILayoutOption[] { GUILayout.Height(20) }))
+            {
+                if (webcamTexture != null)
+                {
+                    uuid = QRCodeHelper.Read(webcamTexture);
+                    if (!string.IsNullOrEmpty(uuid))
+                    {
+                        createWindow?.SetUuid(uuid);
+                        CloseWindow();
                     }
                 }
             }
+
+            if (GUILayout.Button("Close", new GUILayoutOption[] { GUILayout.Height(20) }))
+            {
+                CloseWindow();
+            }
+
+            EditorGUILayout.EndHorizontal();
         }
     }
 

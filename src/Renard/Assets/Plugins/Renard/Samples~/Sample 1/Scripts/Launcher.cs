@@ -4,9 +4,12 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UniRx;
 
 namespace Renard.Sample
 {
+    using QRCode;
+
     public class Launcher : MonoBehaviourCustom
     {
         [SerializeField] protected LicenseHandler licenseHandler = null;
@@ -51,6 +54,24 @@ namespace Renard.Sample
             }
         }
 
+        protected bool retryStartup = false;
+
+        protected bool pauseStartupAsync
+        {
+            get
+            {
+                if (SystemConsoleHandler.LicenseWindow.IsOpenWindow)
+                    return true;
+
+                if (SystemConsoleHandler.SystemWindow.IsOpenWindow)
+                    return true;
+
+                return false;
+            }
+        }
+
+        protected SampleQRCamera sampleQRCamera = new SampleQRCamera();
+
         private CancellationTokenSource _startupToken = null;
 
         private void Awake()
@@ -63,6 +84,23 @@ namespace Renard.Sample
 
         private void Start()
         {
+            Startup();
+        }
+
+        private void OnDestroy()
+        {
+            OnDisposeStartup();
+        }
+
+        private void OnDisposeStartup()
+        {
+            _startupToken?.Dispose();
+            _startupToken = null;
+        }
+
+        private void Startup()
+        {
+            OnDisposeStartup();
             _startupToken = new CancellationTokenSource();
             OnStartupAsync(_startupToken.Token).Forget();
         }
@@ -71,6 +109,8 @@ namespace Renard.Sample
         {
             try
             {
+                retryStartup = false;
+
                 if (createLicenseMode)
                 {
                     // スプラッシュ表示が完了しているか確認する
@@ -85,10 +125,12 @@ namespace Renard.Sample
 
                 // ライセンス確認
                 if (!await CheckLicenseAsync(token))
-                    throw new Exception("license error.");
+                {
+                    if (retryStartup)
+                        throw new Exception("retry startup.");
 
-                // ライセンス読込み確認のデバッグログ
-                Debug.Log($"license: uuid={licenseHandler.Uuid}, contentsId={licenseHandler.ContentsId}, expiryDate={licenseHandler.ExpiryDate}");
+                    throw new Exception("license error.");
+                }
 
                 // スプラッシュ表示が完了しているか確認する
                 await UniTask.WaitWhile(() => !SplashScreen.isFinished, cancellationToken: token);
@@ -97,14 +139,8 @@ namespace Renard.Sample
                 await SceneManager.LoadSceneAsync(configData != null ? configData.FirstSceneName : LauncherConfigAsset.DefaultFirstSceneName, LoadSceneMode.Single);
                 token.ThrowIfCancellationRequested();
 
-                if (configData != null && configData.additiveScenes.Length > 0)
-                {
-                    foreach (var scene in configData.additiveScenes)
-                    {
-                        await SceneManager.LoadSceneAsync(configData.FirstSceneName, LoadSceneMode.Additive);
-                        token.ThrowIfCancellationRequested();
-                    }
-                }
+                // 追加シーンを生成
+                CreateAdditiveScene();
             }
             catch (Exception ex)
             {
@@ -112,12 +148,51 @@ namespace Renard.Sample
 
                 if (!token.IsCancellationRequested)
                 {
+                    if (retryStartup)
+                    {
+                        Startup();
+                    }
+                    else
+                    {
 #if UNITY_EDITOR
-                    UnityEditor.EditorApplication.isPlaying = false;
+                        UnityEditor.EditorApplication.isPlaying = false;
 #else
-                    Application.Quit();
+                        Application.Quit();
 #endif
+                    }
                 }
+            }
+        }
+
+        private void CreateAdditiveScene()
+        {
+            // 投げ捨てで処理
+            OnCreateAdditiveSceneAsync(new CancellationTokenSource().Token).Forget();
+        }
+
+        private async UniTask OnCreateAdditiveSceneAsync(CancellationToken token)
+        {
+            try
+            {
+                if (configData != null && configData.additiveScenes.Length > 0)
+                {
+                    foreach (var scene in configData.additiveScenes)
+                    {
+                        try
+                        {
+                            await SceneManager.LoadSceneAsync(scene, LoadSceneMode.Additive);
+                            token.ThrowIfCancellationRequested();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log($"load additive Scenes error. scene={scene} :{ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Info, "OnCreateAdditiveSceneAsync", $"{ex.Message}");
             }
         }
 
@@ -140,7 +215,7 @@ namespace Renard.Sample
                 }
 
                 // ライセンスを確認
-                var status = licenseHandler.Activation(uuid, licenseLocalPath);
+                var status = LicenseHandler.Activation(uuid, licenseLocalPath);
                 if (status != LicenseStatusEnum.Success)
                 {
                     if (!skipLicense)
@@ -155,7 +230,7 @@ namespace Renard.Sample
                             // ライセンス発行の指示画面を表示
                             errorMessage = "not found license.";
 
-                            CreateLicenseMessage($"ライセンスがありません\n\r発行してください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>");
+                            CreateLicenseMessage();
                         }
                         else
                         {
@@ -164,7 +239,7 @@ namespace Renard.Sample
                                 // ライセンスの有効期限切れ
                                 errorMessage = "expired license.";
 
-                                message = $"ライセンスの有効期限が切れています\n\r有効期限: {licenseHandler.ExpiryDate}";
+                                message = $"ライセンスの有効期限が切れています\n\r有効期限: {LicenseHandler.ExpiryDate}";
                             }
                             else
                             {
@@ -176,18 +251,12 @@ namespace Renard.Sample
 
                             SystemConsoleHandler.SystemWindow
                                 .SetMessage(title, message)
-                                .OnActionDone(() =>
-                                {
-                                    CreateLicenseMessage($"ライセンスの依頼時には\n\r発行コードをお伝えください\n\r\n\r発行コード\n\r<size=20>{uuid}</size>");
-                                },
-                                "ライセンス依頼",
-                                false)
+                                .OnActionDone(CreateLicenseMessage, "ライセンス依頼")
                                 .OnActionCancel(null, "アプリを閉じる")
                                 .Show();
                         }
 
-                        // ウィンドウが開いている間待つ
-                        await UniTask.WaitWhile(() => SystemConsoleHandler.SystemWindow.IsOpenWindow, cancellationToken: token);
+                        await UniTask.WaitWhile(() => pauseStartupAsync, cancellationToken: token);
                         token.ThrowIfCancellationRequested();
 
                         throw new Exception(errorMessage);
@@ -204,20 +273,47 @@ namespace Renard.Sample
             }
         }
 
-        private void CreateLicenseMessage(string message)
+        private void CreateLicenseMessage()
         {
             var title = "ライセンス依頼";
+            var message = $"発行コード\n\r<size=20>{uuid}</size>";
+            var qrCodeImage = QRCodeHelper.CreateQRCode(uuid, 128, 128, IsDebugLog);
 
-            SystemConsoleHandler.SystemWindow
-                .SetMessage(title, message)
-                .OnActionDone(
-                () =>
+            SystemConsoleHandler.LicenseWindow
+                .SetMessage(title, message, qrCodeImage)
+                .OnActionMain(() => GUIUtility.systemCopyBuffer = uuid, "コードコピー", false)
+                .OnActionSub(ActivateLicenseMessage, "アクティベート", false)
+                .Show();
+        }
+
+        private void ActivateLicenseMessage()
+        {
+            var title = "ライセンスアクティベート";
+            var message = "ライセンスＱＲコードを\n\rカメラで読み取ります";
+
+            var qrCodeImage = new Texture2D(256, 256);
+            var qrCamera = sampleQRCamera?.Setup(256, 256);
+
+            sampleQRCamera?.Play();
+
+            SystemConsoleHandler.LicenseWindow
+                .SetMessage(title, message, qrCamera, true)
+                .OnActionMain(() =>
                 {
-                    GUIUtility.systemCopyBuffer = uuid;
+                    if (LicenseHandler.ReadQRCodeToCreateFile(uuid, qrCamera, licenseLocalPath))
+                    {
+                        sampleQRCamera?.Stop();
+                        retryStartup = true;
+                        SystemConsoleHandler.LicenseWindow.Close();
+                    }
                 },
-                "コードコピー",
-                false)
-                .OnActionCancel(null, "アプリを閉じる")
+                "読み取り", false)
+                .OnActionSub(() =>
+                {
+                    sampleQRCamera?.Stop();
+                    CreateLicenseMessage();
+                },
+                "依頼画面に戻る", false)
                 .Show();
         }
 

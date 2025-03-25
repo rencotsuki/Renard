@@ -6,10 +6,11 @@ using TMPro;
 
 namespace Renard.Sample
 {
+    using QRCode;
+
     [Serializable]
     public class CreateLicenseApp : MonoBehaviourCustom
     {
-        [SerializeField] private LicenseHandler handler = default;
         [SerializeField] private Button buttonCreate = default;
         [SerializeField] private TMP_InputField inputFieldUuid = default;
         [SerializeField] private Button buttonDefaultContentsId = default;
@@ -18,6 +19,9 @@ namespace Renard.Sample
         [SerializeField] private TextMeshProUGUI textCreateDate = default;
         [SerializeField] private TextMeshProUGUI textExpiryDate = default;
         [SerializeField] private TMP_Dropdown dropdownValidityDays = default;
+        [SerializeField] private Vector2Int createQRCodeSize = new Vector2Int(512, 512);
+        [SerializeField] private Button buttonQRCodeReader = default;
+        [SerializeField] private RawImage imageCreateQRCode = default;
 
         private LicenseData editData = new LicenseData();
         private string uuid => editData.Uuid;
@@ -32,7 +36,7 @@ namespace Renard.Sample
             {
                 if (!string.IsNullOrEmpty(editData.Uuid) &&
                     !string.IsNullOrEmpty(editData.ContentsId) &&
-                    editData.ExpiryDate > DateTime.UtcNow)
+                    editData.ExpiryDate > LicenseHandler.GetNow())
                 {
                     return true;
                 }
@@ -40,13 +44,14 @@ namespace Renard.Sample
             }
         }
 
+        private SampleQRCamera sampleQRCamera = new SampleQRCamera();
+
+        private string strReadUuid = string.Empty;
+        private WebCamTexture qrCameraTexture = null;
+        private Texture2D createQRCodeTexture = null;
+
         private void Start()
         {
-#if UNITY_EDITOR
-            // 動作確認用
-            handler.IsDebugLog = true;
-#endif
-
             buttonCreate.onClick.AddListener(CreateLicense);
             buttonDefaultContentsId.onClick.AddListener(SetDefaultContentsId);
 
@@ -62,6 +67,8 @@ namespace Renard.Sample
 
             dropdownValidityDays.value = 0;
             dropdownValidityDays.onValueChanged.AddListener(ChangedValidityDays);
+
+            buttonQRCodeReader.onClick.AddListener(OpenQRCodeReader);
 
             ResetEditData();
         }
@@ -79,6 +86,9 @@ namespace Renard.Sample
 
             if (textExpiryDate != null && textExpiryDate.text != expiryDate)
                 textExpiryDate.text = expiryDate;
+
+            if (imageCreateQRCode != null && imageCreateQRCode.texture != createQRCodeTexture)
+                imageCreateQRCode.texture = createQRCodeTexture;
         }
 
         private void ResetEditData()
@@ -86,8 +96,12 @@ namespace Renard.Sample
             editData.Uuid = string.Empty;
             inputFieldUuid.text = editData.Uuid;
 
-            editData.CreateDate = DateTime.UtcNow;
+            editData.CreateDate = LicenseHandler.GetNow();
             editData.ValidityDays = LicenseHandler.ValidityDaysList[0];
+
+            createQRCodeTexture = null;
+
+            sampleQRCamera?.Stop();
 
             SetDefaultContentsId();
         }
@@ -96,9 +110,11 @@ namespace Renard.Sample
         {
 #if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
 
-            editData.CreateDate = DateTime.UtcNow;
+            editData.CreateDate = LicenseHandler.GetNow();
 
-            if (handler != null && handler.Create(editData))
+            createQRCodeTexture = null;
+
+            if (LicenseHandler.Create(editData, out createQRCodeTexture, createQRCodeSize, IsDebugLog))
             {
                 SystemConsoleHandler.SystemWindow
                     .SetMessage("ライセンス生成", "成功しました")
@@ -125,7 +141,7 @@ namespace Renard.Sample
 
         private void SetDefaultContentsId()
         {
-            editData.ContentsId = handler != null ? handler.ConfigContentsId : string.Empty;
+            editData.ContentsId = LicenseHandler.ConfigContentsId;
             inputFieldContentsId.text = editData.ContentsId;
         }
 
@@ -149,6 +165,31 @@ namespace Renard.Sample
 
             editData.ValidityDays = LicenseHandler.ValidityDaysList[0];
             dropdownValidityDays.value = 0;
+        }
+
+        private void OpenQRCodeReader()
+        {
+            qrCameraTexture = sampleQRCamera?.Setup(createQRCodeSize.x, createQRCodeSize.y);
+            sampleQRCamera?.Play();
+
+            SystemConsoleHandler.LicenseWindow
+                .SetMessage("QRコード読込み", "ライセンスＱＲコードを\n\rカメラで読み取ります", qrCameraTexture, true)
+                .OnActionMain(() =>
+                {
+                    strReadUuid = QRCodeHelper.Read(qrCameraTexture);
+                    if (!string.IsNullOrEmpty(strReadUuid))
+                    {
+                        editData.Uuid = strReadUuid;
+                        SystemConsoleHandler.LicenseWindow.Close();
+                    }
+                },
+                "読み取り", false)
+                .OnActionSub(() =>
+                {
+                    sampleQRCamera?.Stop();
+                },
+                "閉じる")
+                .Show();
         }
     }
 }

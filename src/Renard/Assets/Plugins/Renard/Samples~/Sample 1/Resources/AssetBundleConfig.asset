@@ -12,6 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 68ec59c869ca42a4ca35c5d57d2f6ee3, type: 3}
   m_Name: AssetBundleConfig
   m_EditorClassIdentifier: 
-  _isEncrypt: 0
-  _encryptKey: RenardAsset
-  _outputPath: AssetBundles
+  _outputPath: ../../CreateAssetBundles
+  _encryptKey: GAaDF-dwuw*9AqhN=DjjFXGEScv^HaRZ
+  _encryptIV: aLKsVTbF6*bFFrCM
+  windows:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  osx:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  ios:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  android:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  other:
+    _localPath: AssetBundles
+    _isEncrypt: 0

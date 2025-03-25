@@ -17,6 +17,10 @@ namespace Renard.License
 
         [Header("※必ずResources下に置いてください")]
 
+        [Header("ライセンスファイル拡張子(空でも可)")]
+        [SerializeField] private string _licenseFileExtension = "";
+        public string LicenseFileExtension => _licenseFileExtension;
+
         [Header("アプリ識別情報")]
         [SerializeField] private string _contentsId = "Renard";
         public string ContentsId => _contentsId;
@@ -60,8 +64,8 @@ namespace Renard.License
             {
                 var random = new System.Random(DateTime.UtcNow.Millisecond);
 
-                _encryptKey = LicenseManager.GeneratePassKey(LicenseManager.EncryptKeyLength, random.Next(1, 1000));
-                _encryptIV = LicenseManager.GeneratePassKey(LicenseManager.EncryptIVLength, random.Next(1, 1000));
+                _encryptKey = AESGenerator.GenerateKey(AESGenerator.EncryptKeyLength, random.Next(1, 1000), Debug.isDebugBuild);
+                _encryptIV = AESGenerator.GenerateKey(AESGenerator.EncryptIVLength, random.Next(1, 1000), Debug.isDebugBuild);
             }
             catch (Exception ex)
             {

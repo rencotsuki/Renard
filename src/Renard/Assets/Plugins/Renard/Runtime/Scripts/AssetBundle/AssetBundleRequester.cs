@@ -11,9 +11,14 @@ namespace Renard.AssetBundleUniTask
     [Serializable]
     public class AssetBundleRequester
     {
-        private static bool IsDebugLog => AssetBundleManager.IsDebugLogMaster;
-        private static int LoadingTimeOutMilliseconds => AssetBundleManager.LoadingTimeOutMilliseconds;
-        private static int LoadRetryCount => AssetBundleManager.LoadRetryCount;
+        protected int loadingTimeOutMilliseconds => AssetBundleManager.LoadingTimeOutMilliseconds;
+        protected int loadRetryCount => AssetBundleManager.LoadRetryCount;
+
+        protected AssetBundleManager manager => AssetBundleManager.Singleton;
+        protected bool isDebugLog => manager != null ? manager.IsDebugLog : false;
+        protected bool isEncrypt => manager != null ? manager.IsEncrypt : false;
+        protected string encryptKey => manager != null ? manager.EncryptKey : string.Empty;
+        protected string encryptIV => manager != null ? manager.EncryptIV : string.Empty;
 
         public string AssetName { get; private set; } = string.Empty;
         public string Path { get; private set; } = string.Empty;
@@ -27,15 +32,13 @@ namespace Renard.AssetBundleUniTask
         public string ErrorMessage { get; private set; } = string.Empty;
         public AssetBundle AssetBundle { get; private set; } = null;
 
-        private bool _isEncrypt = false;
-        private string _encryptKey = string.Empty;
         private uint _crc = 0;
         private AssetBundleCreateRequest _request = null;
         private CancellationTokenSource _cancellationTokenSource = null;
 
         protected void Log(DebugerLogType logType, string methodName, string message)
         {
-            if (!IsDebugLog)
+            if (!isDebugLog)
             {
                 if (logType == DebugerLogType.Info)
                     return;
@@ -44,17 +47,13 @@ namespace Renard.AssetBundleUniTask
             DebugLogger.Log(this.GetType(), logType, methodName, message);
         }
 
-        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, bool encrypt, string encryptKey, params string[] dependencies)
+        public static AssetBundleRequester CreateRequest(string assetName, string path, uint crc, params string[] dependencies)
         {
             var load = new AssetBundleRequester();
-            if (load.CreateTack(assetName, path, crc, encrypt, encryptKey, dependencies))
-            {
+            if (load.CreateTack(assetName, path, crc, dependencies))
                 return load;
-            }
-            else
-            {
-                return null;
-            }
+
+            return null;
         }
 
         ~AssetBundleRequester()
@@ -62,7 +61,7 @@ namespace Renard.AssetBundleUniTask
             Dispose();
         }
 
-        private bool CreateTack(string assetName, string path, uint crc, bool encrypt, string encryptKey, string[] dependencies)
+        private bool CreateTack(string assetName, string path, uint crc, string[] dependencies)
         {
             if (string.IsNullOrEmpty(assetName) || string.IsNullOrEmpty(path)) return false;
 
@@ -77,8 +76,6 @@ namespace Renard.AssetBundleUniTask
             }
 #endif
             _crc = crc;
-            _isEncrypt = encrypt;
-            _encryptKey = encryptKey;
 
             Initialize();
             return true;
@@ -92,7 +89,7 @@ namespace Renard.AssetBundleUniTask
 
         public bool Retry()
         {
-            if (RetryCount >= LoadRetryCount)
+            if (RetryCount >= loadRetryCount)
                 return false;
 
             RetryCount++;
@@ -106,7 +103,7 @@ namespace Renard.AssetBundleUniTask
             IsDone = false;
             IsFileError = false;
             ErrorMessage = string.Empty;
-            EndTimeout = Time.time + ((float)LoadingTimeOutMilliseconds * 0.001f);
+            EndTimeout = Time.time + ((float)loadingTimeOutMilliseconds * 0.001f);
 
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();
@@ -117,7 +114,7 @@ namespace Renard.AssetBundleUniTask
         {
             try
             {
-                Log(DebugerLogType.Info, "OnLoadFromStreamAsync", $"assetName={assetName}, crc={_crc}, encrypt={_isEncrypt}, path={path}");
+                Log(DebugerLogType.Info, "OnLoadFromStreamAsync", $"assetName={assetName}, crc={_crc}, encrypt={isEncrypt}, path={path}");
 
                 using (var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
@@ -127,10 +124,10 @@ namespace Renard.AssetBundleUniTask
                         throw new Exception("File length zero.");
                     }
 
-                    if (_isEncrypt)
+                    if (isEncrypt)
                     {
                         var uniqueSalt = System.Text.Encoding.UTF8.GetBytes(assetName);
-                        var uncryptor = new SeekableAesStream(fs, _encryptKey, uniqueSalt);
+                        var uncryptor = new SeekableAesStream(fs, encryptKey, encryptIV, isDebugLog);
                         _request = AssetBundle.LoadFromStreamAsync(uncryptor, _crc);
                         await _request.ToUniTask(Cysharp.Threading.Tasks.Progress.Create<float>(x => Progress = x), PlayerLoopTiming.FixedUpdate, cancellationToken);
 

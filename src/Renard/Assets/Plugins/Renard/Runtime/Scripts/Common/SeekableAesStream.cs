@@ -1,52 +1,60 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Renard.AssetBundleUniTask
+namespace Renard
 {
+    using Debuger;
+
     public class SeekableAesStream : Stream
     {
-        private Stream _baseStream;
-        private AesManaged _aes;
-        private ICryptoTransform _cryptor;
+        private Stream _baseStream = null;
+        private Aes _aesAlg = null;
+        private ICryptoTransform _cryptor = default;
         public bool AutoDisposeBaseStream { get; set; } = true;
 
-        public SeekableAesStream(Stream baseStream, string password, byte[] salt)
-        {
-            _baseStream = baseStream;
-            Synchronized(_baseStream);
+        private bool _isDebugLog = false;
 
-            using (var key = new PasswordDeriveBytes(password, salt))
+        protected void Log(DebugerLogType logType, string methodName, string message)
+        {
+            if (!_isDebugLog)
             {
-                _aes = new AesManaged();
-                _aes.KeySize   = 256;
-                _aes.BlockSize = 128;
-                _aes.Mode      = CipherMode.CBC;
-                _aes.Padding   = PaddingMode.PKCS7;
-                _aes.Key       = GetKeyFromPassword(password, salt, _aes.KeySize);
-                _aes.IV        = GetIVFromPassword(password, _aes.BlockSize);
+                if (logType == DebugerLogType.Info)
+                    return;
             }
+
+            DebugLogger.Log(typeof(SeekableAesStream), logType, methodName, message);
         }
 
-        private byte[] GetKeyFromPassword(string password, byte[] salt, int keySize)
+        public SeekableAesStream(Stream baseStream, string key, string iv, bool isDebugLog = false)
         {
-            var deriveBytes = new Rfc2898DeriveBytes(password, salt);
-            deriveBytes.IterationCount = 1000;
-            return deriveBytes.GetBytes(keySize / 8);
-        }
+            _isDebugLog = isDebugLog;
 
-        private byte[] GetIVFromPassword(string password, int blockSize)
-        {
-            var deriveBytes = new Rfc2898DeriveBytes(password + DateTime.Now.Ticks.ToString(), 100);
-            deriveBytes.IterationCount = 1000;
-            return deriveBytes.GetBytes(blockSize / 8);
+            try
+            {
+                _baseStream = baseStream;
+                Synchronized(_baseStream);
+
+                _aesAlg = Aes.Create();
+                _aesAlg.Key = Encoding.UTF8.GetBytes(key);
+                _aesAlg.IV = Encoding.UTF8.GetBytes(iv);
+                _aesAlg.Mode = CipherMode.CBC;
+                _aesAlg.Padding = PaddingMode.PKCS7;
+
+                _cryptor = _aesAlg.CreateEncryptor(_aesAlg.Key, _aesAlg.IV);
+            }
+            catch (Exception ex)
+            {
+                Log(DebugerLogType.Warning, "SeekableAesStream", $"{ex.Message}");
+            }
         }
 
         private void Cipher(byte[] buffer, int offset, int count, long streamPos, bool isEncryptor)
         {
-            var blockSizeInByte = _aes.BlockSize / 8;
+            var blockSizeInByte = _aesAlg.BlockSize / 8;
             var blockNumber = (streamPos / blockSizeInByte) + 1;
             var keyPos = streamPos % blockSizeInByte;
 
@@ -56,11 +64,11 @@ namespace Renard.AssetBundleUniTask
 
             if (isEncryptor)
             {
-                _cryptor = _aes.CreateEncryptor(_aes.Key, _aes.IV);
+                _cryptor = _aesAlg.CreateEncryptor(_aesAlg.Key, _aesAlg.IV);
             }
             else
             {
-                _cryptor = _aes.CreateDecryptor(_aes.Key, _aes.IV);
+                _cryptor = _aesAlg.CreateDecryptor(_aesAlg.Key, _aesAlg.IV);
             }
 
             for (int i = offset; i < count; i++)
@@ -105,7 +113,7 @@ namespace Renard.AssetBundleUniTask
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"SeekableAesStream::Read {_baseStream.ToString()} - {ex.Message}");
+                Log(DebugerLogType.Warning, "Read", $"{ex.Message}");
             }
 
             return offset;
@@ -122,7 +130,7 @@ namespace Renard.AssetBundleUniTask
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"SeekableAesStream::ReadAsync {_baseStream.ToString()} - {ex.Message}");
+                Log(DebugerLogType.Warning, "ReadAsync", $"{_baseStream.ToString()} - {ex.Message}");
             }
 
             return offset;
@@ -137,7 +145,7 @@ namespace Renard.AssetBundleUniTask
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"SeekableAesStream::Write {_baseStream.ToString()} - {ex.Message}");
+                Log(DebugerLogType.Warning, "Write", $"{_baseStream.ToString()} - {ex.Message}");
             }
         }
 
@@ -150,7 +158,7 @@ namespace Renard.AssetBundleUniTask
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"SeekableAesStream::WriteAsync {_baseStream.ToString()} - {ex.Message}");
+                Log(DebugerLogType.Warning, "WriteAsync", $"{_baseStream.ToString()} - {ex.Message}");
             }
         }
 
@@ -159,7 +167,7 @@ namespace Renard.AssetBundleUniTask
             if (disposing)
             {
                 _cryptor?.Dispose();
-                _aes?.Dispose();
+                _aesAlg?.Dispose();
                 if (AutoDisposeBaseStream)
                     _baseStream?.Dispose();
             }

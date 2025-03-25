@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 
@@ -7,6 +8,7 @@ namespace Renard.AssetBundleUniTask
     public static class AssetBundleEditor
     {
         private static AssetBundleConfigAsset assetBundleConfig = null;
+        private static string outputPath = string.Empty;
 
         private static bool LoadAssetBundleConfig()
         {
@@ -15,6 +17,8 @@ namespace Renard.AssetBundleUniTask
                 assetBundleConfig = AssetBundleConfigAsset.Load();
                 if (assetBundleConfig == null)
                     throw new Exception("not found assetBundleConfig.");
+
+                outputPath = assetBundleConfig.OutputFullPath;
                 return  true;
             }
             catch
@@ -31,13 +35,18 @@ namespace Renard.AssetBundleUniTask
                 if (assetBundleConfig == null)
                     throw new Exception("not found assetBundleConfig.");
 
-                var outputPath = string.IsNullOrEmpty(assetBundleConfig.OutputPath) ?
-                                    $"{Application.dataPath}/../../{AssetBundleManager.DefaultOutputPath}" :
-                                     $"{Application.dataPath}/../../{assetBundleConfig.OutputPath}";
+                var config = assetBundleConfig.GetConfig(target);
 
-                AssetBundleBuildScript.BuildAssetBundles(target, outputPath, assetBundleConfig.IsEncrypt, assetBundleConfig.EncryptKey);
+                AssetBundleBuildScript.BuildAssetBundles(target, outputPath, assetBundleConfig, false, true);
 
-                Debug.Log($"build <color=yellow>success</color>. platform={target}, path={outputPath}");
+                if (assetBundleConfig.GetConfig(target).IsEncrypt)
+                {
+                    Debug.Log($"build <color=yellow>success</color>. platform={target}, path={outputPath}\n\rpath(encrypt)={outputPath}/{AssetBundleBuildScript.OutputEncryptPath}");
+                }
+                else
+                {
+                    Debug.Log($"build <color=yellow>success</color>. platform={target}, path={outputPath}");
+                }
             }
             catch (Exception ex)
             {
@@ -117,6 +126,19 @@ namespace Renard.AssetBundleUniTask
             BuildAssetBundlesAndroid();
             BuildAssetBundlesOSX();
             BuildAssetBundlesiOS();
+        }
+
+        [MenuItem("Renard/AssetBundle/Copy Assets", false)]
+        public static void CopyAssets()
+        {
+            if (AssetBundleBuildScript.CopyAssets(EditorUserBuildSettings.activeBuildTarget, false, true))
+            {
+                Debug.Log($"AssetBundles複製:<color=yellow>成功</color>");
+            }
+            else
+            {
+                Debug.Log($"AssetBundles複製:<color=red>失敗</color>");
+            }
         }
     }
 }

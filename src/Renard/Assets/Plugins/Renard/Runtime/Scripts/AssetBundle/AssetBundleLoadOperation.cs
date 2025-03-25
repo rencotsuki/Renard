@@ -4,10 +4,90 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 #endif
 
+using Renard;
+using Renard.Debuger;
+
+public abstract class AssetBundleLoadOperation : IEnumerator
+{
+    protected AssetBundleManager manager => AssetBundleManager.Singleton;
+    protected bool isDebugLog => manager != null ? manager.IsDebugLog : false;
+    protected bool isSetup => manager != null ? manager.IsSetup : false;
+    protected bool isInit => manager != null ? manager.IsInit : false;
+
+    protected string _bundleName = string.Empty;
+    public string BundleName
+    {
+        get
+        {
+            return _bundleName;
+        }
+    }
+
+    protected string _assetLevelName = string.Empty;
+    public string AssetLevelName
+    {
+        get
+        {
+            return _assetLevelName;
+        }
+    }
+
+    protected float _progress = 0f;
+    public float Progress
+    {
+        get
+        {
+            return _progress;
+        }
+    }
+
+    protected string _error = string.Empty;
+    public string Error
+    {
+        get
+        {
+            return _error;
+        }
+    }
+
+    public object Current
+    {
+        get
+        {
+            return null;
+        }
+    }
+
+    protected void Log(DebugerLogType logType, string methodName, string message)
+    {
+        if (!isDebugLog)
+        {
+            if (logType == DebugerLogType.Info)
+                return;
+        }
+
+        DebugLogger.Log(this.GetType(), logType, methodName, message);
+    }
+
+    public virtual bool MoveNext()
+    {
+        return !IsDone();
+    }
+
+    public virtual void Reset() { }
+
+    public abstract bool Update();
+
+    public abstract bool IsDone();
+}
+
+public abstract class AssetBundleLoadAssetOperation : AssetBundleLoadOperation
+{
+    public abstract T GetAsset<T>() where T : UnityEngine.Object;
+}
+
 namespace Renard.AssetBundleUniTask
 {
-    using Debuger;
-
     public class LoadedAssetBundle
     {
         public AssetBundle AssetBundle;
@@ -18,80 +98,6 @@ namespace Renard.AssetBundleUniTask
             AssetBundle = assetBundle;
             ReferencedCount = 1;
         }
-    }
-
-    public abstract class AssetBundleLoadOperation : IEnumerator
-    {
-        protected AssetBundleManager manager => AssetBundleManager.Singleton;
-        protected bool isDebugLog => manager != null ? manager.IsDebugLog : false;
-        protected bool isSetup => manager != null ? manager.IsSetup : false;
-        protected bool isInit => manager != null ? manager.IsInit : false;
-
-        protected string _bundleName = string.Empty;
-        public string BundleName
-        {
-            get
-            {
-                return _bundleName;
-            }
-        }
-
-        protected string _assetLevelName = string.Empty;
-        public string AssetLevelName
-        {
-            get
-            {
-                return _assetLevelName;
-            }
-        }
-
-        protected float _progress = 0f;
-        public float Progress
-        {
-            get
-            {
-                return _progress;
-            }
-        }
-
-        protected string _error = string.Empty;
-        public string Error
-        {
-            get
-            {
-                return _error;
-            }
-        }
-
-        public object Current
-        {
-            get
-            {
-                return null;
-            }
-        }
-
-        protected void Log(DebugerLogType logType, string methodName, string message)
-        {
-            if (!isDebugLog)
-            {
-                if (logType == DebugerLogType.Info)
-                    return;
-            }
-
-            DebugLogger.Log(this.GetType(), logType, methodName, message);
-        }
-
-        public virtual bool MoveNext()
-        {
-            return !IsDone();
-        }
-
-        public virtual void Reset() { }
-
-        public abstract bool Update();
-
-        public abstract bool IsDone();
     }
 
 #if UNITY_EDITOR
@@ -198,11 +204,6 @@ namespace Renard.AssetBundleUniTask
         {
             return (_request != null && _request.isDone) || !string.IsNullOrEmpty(_error);
         }
-    }
-
-    public abstract class AssetBundleLoadAssetOperation : AssetBundleLoadOperation
-    {
-        public abstract T GetAsset<T>() where T : UnityEngine.Object;
     }
 
     public class AssetBundleLoadAssetOperationSimulation : AssetBundleLoadAssetOperation

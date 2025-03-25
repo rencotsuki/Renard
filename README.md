@@ -1,14 +1,24 @@
-Renard
-===
-[![Releases](https://img.shields.io/github/release/rencotsuki/Renard.svg)](https://github.com/rencotsuki/Renard/releases)
+# Renard  
+　カジュアルコンテンツの基本パッケージ  
 
-Development environment  
-　Unity6000.0.32f1 以降  
-　<img src="https://cdn.sanity.io/images/fuvbjjlp/production/f139fd06314dc205cb4bd4c8150aa42f052ed62c-2304x1296.png" width="128">  
+## ビルド対象プラットフォーム  
+　<img src="https://img.shields.io/badge/-Windows-40AEF0.svg?logo=windows11&style=flat"> <img src="https://img.shields.io/badge/-OSX-000000.svg?logo=apple&style=flat"> <img src="https://img.shields.io/badge/-iOS-000000.svg?logo=apple&style=flat"> <img src="https://img.shields.io/badge/-Android-436653.svg?logo=android&style=flat">  
+　※プラットフォームによっては一部機能がまだ対応されていないものがあります。  
 
-Install From  
+## Unity動作環境  
+　<img src="https://img.shields.io/badge/-Unity2022.3以降-000000.svg?logo=unity&style=flat"> <img src="https://img.shields.io/badge/-Unity2023.3以降-000000.svg?logo=unity&style=flat"> <img src="https://img.shields.io/badge/-Unity6000.0以降-000000.svg?logo=unity&style=flat">
+
+## UnityPackageManagerのインストールURL  
 　`git@github.com:rencotsuki/Renard.git?path=src/Renard/Assets/Plugins/Renard`  
 
-　※利用するにはsshの設定が必要です。  
- 　　特にWindows環境においては、SourceTreeの「Putty/Plink」設定を使っていると、  
- 　　UPMが使用するOpenSSHと噛み合わないため、SourceTree側を「OpenSSH」設定に合わせる必要があります。  
+　※注意  
+　Windows環境においてはUnityPackageManagerがOpenSSHを利用するので環境設定が必要になります。  
+　ssh認証が通らないとパッケージがインストールされないので注意が必要です。  
+　さらにWindows環境でSourceTreeのPutty/Plink設定を使っている場合は、  
+　OpenSSH設定に変更する必要があります。  
+
+## 備考  
+　URPを利用する際は、ScriptingDefineSymbols設定に  
+　`RENARD_USING_URP`  
+　を設定する必要があります。  
+

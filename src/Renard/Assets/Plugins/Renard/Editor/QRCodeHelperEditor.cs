@@ -9,7 +9,7 @@ namespace Renard.QRCode
         private QRImageSize _size = QRImageSize.SIZE_256;
         private string _content = "";
 
-        [UnityEditor.MenuItem("Renard/License/CreateQRCode", false, 3)]
+        [UnityEditor.MenuItem("Renard/License/Open CreateLicenseQR Editor", false)]
         private static void Init()
         {
             var window = EditorWindow.GetWindow<QRCodeHelperEditor>();

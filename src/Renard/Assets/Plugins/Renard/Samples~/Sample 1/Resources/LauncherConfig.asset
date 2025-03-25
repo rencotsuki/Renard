@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: LauncherConfig
   m_EditorClassIdentifier: 
   copyrightFirstYear: 2025
-  minAppVersion: 0.9.0
-  minBuildNumber: 0
+  minAppVersion: 1.0.0
+  minBuildNumber: 1
   windows:
     TargetFrameRate: 60
     SkipLicense: 0
