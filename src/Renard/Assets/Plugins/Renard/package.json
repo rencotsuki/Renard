@@ -1,9 +1,9 @@
 {
-    "name": "com.meleap.renard",
+    "name": "com.foxlive.renard",
     "displayName": "Renard",
     "author": {
-        "name": "meleap",
-        "url": "https://meleap.com"
+        "name": "FoxLive",
+        "url": ""
     },
     "version": "1.0.0",
     "unity": "2022.3",
@@ -13,7 +13,7 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/meleap/Renard.git"
+        "url": "git+ssh://git@github.com/rencotsuki/Renard.git"
     },
     "license": "MIT",
     "category": "assets",
