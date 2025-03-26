@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68ec59c869ca42a4ca35c5d57d2f6ee3, type: 3}
+  m_Name: AssetBundleConfig
+  m_EditorClassIdentifier: 
+  _outputPath: ../../CreateAssetBundles
+  _encryptKey: GAaDF-dwuw*9AqhN=DjjFXGEScv^HaRZ
+  _encryptIV: aLKsVTbF6*bFFrCM
+  windows:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  osx:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  ios:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  android:
+    _localPath: AssetBundles
+    _isEncrypt: 0
+  other:
+    _localPath: AssetBundles
+    _isEncrypt: 0

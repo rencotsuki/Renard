@@ -1,0 +1,11 @@
+- name: API Documentation
+  href: api/
+  homepage: api/Renard.html
+
+- name: Repository
+  href: https://github.com/meleap/Renard
+  homepage: https://github.com/meleap/Renard
+
+- name: Releases
+  href: https://github.com/meleap/Renard/releases
+  homepage: https://github.com/meleap/Renard/releases
